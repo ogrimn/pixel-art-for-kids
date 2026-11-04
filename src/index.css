@@ -2,22 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DungGeunMo retro pixel font — 픽셀아트 타이틀 전용 */
+/* Moneygraphy Pixel — 사이트의 기본 UI 폰트 */
 @font-face {
-  font-family: 'DungGeunMo';
-  src: url('/fonts/DungGeunMo.ttf') format('truetype');
+  font-family: 'Moneygraphy Pixel';
+  src: url('/fonts/Moneygraphy-Pixel.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
+/* DungGeunMo retro pixel font — 픽셀아트 타이틀 전용.
+   로딩이 늦더라도 대체 폰트에 고정되지 않고 실제 픽셀 폰트로 교체되도록 swap을 사용한다. */
+@font-face {
+  font-family: 'DungGeunMo';
+  src: url('/fonts/DungGeunMo.woff2') format('woff2'),
+       url('/fonts/DungGeunMo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Press Start 2P — 영문/숫자 전용 구글 픽셀 폰트 (한글 글리프 없음) */
+@font-face {
+  font-family: 'Press Start 2P';
+  src: url('/fonts/PressStart2P.woff2') format('woff2'),
+       url('/fonts/PressStart2P.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 'PixelMixed' — 같은 font-family 이름에 unicode-range로 두 폰트를 겹쳐 등록해,
+   브라우저가 문자 단위로 자동으로 알맞은 폰트를 골라 쓰게 한다.
+   영문 알파벳(A-Z, a-z)만 Press Start 2P로 렌더링되고, 숫자·문장부호·기호·아이콘·한글은
+   모두 매칭되는 서브 폰트가 없어 폰트 스택의 다음 순서인 DungGeunMo(둥근모꼴)로 자연스럽게 대체된다. */
+@font-face {
+  font-family: 'PixelMixed';
+  src: url('/fonts/PressStart2P.woff2') format('woff2'),
+       url('/fonts/PressStart2P.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0041-005A, U+0061-007A;
+}
+@font-face {
+  font-family: 'PixelMixed';
+  src: url('/fonts/DungGeunMo.woff2') format('woff2'),
+       url('/fonts/DungGeunMo.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+AC00-D7A3, U+1100-11FF, U+3130-318F;
+}
+
 * { box-sizing: border-box; }
+
+/* html에도 고정 높이/overflow를 명시해야, iOS Safari에서 주소창 상태 변화나 Split View 등으로
+   실제 보이는 영역이 100vh와 어긋나는 순간에도 문서 자체가 스크롤되어 상단 헤더가
+   화면 밖으로 밀려나지 않는다 (body의 overflow:hidden만으로는 보장되지 않음). */
+html {
+  height: 100%;
+  overflow: hidden;
+}
 
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
   overflow: hidden;
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+  /* 핀치 줌·더블탭 확대를 CSS 차원에서도 막는다(App.jsx의 JS 기반 제스처 차단과 이중 방어).
+     캔버스처럼 직접 그리기가 필요한 엘리먼트는 자체적으로 더 구체적인 touch-action을
+     지정해두어 이 기본값을 덮어쓴다. */
+  touch-action: manipulation;
+  font-family: 'Moneygraphy Pixel', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
 }
 
 canvas {
@@ -29,8 +86,549 @@ canvas {
 .header-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .header-scrollbar::-webkit-scrollbar { display: none; }
 
+/* 사이트 전역 픽셀 폰트 — 한글/숫자/기호는 DungGeunMo, 영문 알파벳(A-Z, a-z)만 자동으로 Press Start 2P로 렌더링됨 */
 .font-pixel {
+  font-family: 'PixelMixed', 'DungGeunMo', 'Courier New', monospace;
+}
+
+/* 영문 알파벳 전용 텍스트에 Press Start 2P를 명시적으로 강제 적용할 때 사용 (예: PIXEL ART 타이틀) */
+.font-pixel-en {
+  font-family: 'Press Start 2P', 'Courier New', monospace;
+}
+
+/* 영문 알파벳이 섞여 있어도 전부 DungGeunMo(둥근모꼴)로 통일해야 할 때 사용 (예: 'A4 출력'의 'A') */
+.font-pixel-kr {
   font-family: 'DungGeunMo', 'Courier New', monospace;
+}
+
+/* 사이드바 소분류 타이틀·도움말 모달 본문 설명용 */
+.font-code {
+  font-family: 'Moneygraphy Pixel', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+}
+
+/* 시작 화면의 여백과 높이만 반응형으로 조정한다. 폰트는 기존 픽셀 폰트를 유지한다. */
+.entry-shell {
+  padding: clamp(1rem, 2.4vw, 2rem);
+}
+
+.entry-content {
+  max-width: 56rem;
+  gap: 20px;
+}
+
+.entry-title {
+  margin: 0;
+  font-size: 8rem;
+  letter-spacing: 2px;
+  gap: 44px;
+}
+
+.entry-description {
+  margin: 0;
+  font-size: clamp(1.125rem, 2.2vw, 1.375rem);
+  letter-spacing: 0.1em;
+}
+
+.pixel-board-preview {
+  margin-bottom: 8px;
+}
+
+.entry-form {
+  gap: 0.96rem;
+}
+
+.entry-input-wrap {
+  padding: 1rem 1.5rem;
+}
+
+.entry-input {
+  font-size: clamp(1.375rem, 2.7vw, 1.75rem);
+  letter-spacing: 0.1em;
+}
+
+.entry-input-error::placeholder {
+  color: #f7d070;
+  opacity: 1;
+}
+
+.entry-button {
+  padding: 1.125rem 2rem;
+  background: #f7d070;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.32),
+    0 7px 0 #aa7c2e,
+    0 14px 28px rgba(247, 208, 112, 0.26);
+  font-size: clamp(1.375rem, 2.7vw, 1.625rem);
+  line-height: 1;
+  letter-spacing: 0.1em;
+}
+
+.entry-button:hover {
+  filter: brightness(1.05);
+}
+
+.entry-button:active {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.24),
+    0 2px 0 #aa7c2e,
+    0 7px 16px rgba(247, 208, 112, 0.22);
+}
+
+.entry-button-label {
+  color: #211b0d;
+}
+
+/* 크기 선택 화면: 넓은 화면은 2열로 공간을 쓰고, 낮은 화면에서는 높이를 압축한다. */
+.setup-shell {
+  padding: clamp(1rem, 2vw, 1.75rem) clamp(1rem, 3vw, 2.5rem);
+}
+
+.setup-content {
+  max-width: 74rem;
+  gap: 1rem;
+}
+
+.setup-title h1 {
+  margin: 0;
+  font-size: clamp(2.25rem, 4.4vw, 3rem);
+}
+
+.setup-title p {
+  margin: 0.4rem 0 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.2rem);
+  font-weight: 550;
+  letter-spacing: -0.02em;
+}
+
+.setup-title {
+  margin-bottom: 0.597rem;
+}
+
+.setup-import {
+  gap: 1rem;
+  padding: 0.875rem 1.125rem;
+}
+
+.setup-import-title {
+  font-size: 1.2rem;
+}
+
+.setup-import-description {
+  font-size: 1rem;
+}
+
+.setup-import-button {
+  padding: 0.7rem 1.125rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.setup-import-button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(111, 155, 196, 0.2);
+}
+
+.setup-import-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(111, 155, 196, 0.14);
+}
+
+.setup-summary {
+  margin-bottom: 0.2rem;
+  padding: 0.75rem 1rem;
+}
+
+.setup-summary > div:first-child {
+  gap: 0.875rem;
+}
+
+.setup-summary-icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.setup-summary-value {
+  font-size: 1.35rem;
+}
+
+.setup-summary-badge {
+  padding: 0.55rem 1rem;
+  font-size: 1rem;
+}
+
+.setup-kicker {
+  margin: 0;
+  font-size: 0.825rem;
+  letter-spacing: 0.1em;
+}
+
+.setup-section-title {
+  margin-bottom: 0.825rem;
+}
+
+.setup-card-grid {
+  gap: 0.825rem;
+}
+
+.setup-card {
+  min-width: 0;
+  height: 15rem;
+  justify-content: center;
+  gap: 0.96rem;
+  padding: 1.1rem 0.55rem;
+}
+
+.setup-ratio-preview {
+  height: 3.6rem;
+}
+
+.setup-card-name {
+  font-size: 1.625rem;
+}
+
+.setup-card-description {
+  font-size: 0.9rem;
+}
+
+.setup-grid-size {
+  font-size: 1.75rem;
+  line-height: 1.35;
+}
+
+.setup-level-badge {
+  padding: 0.5rem 0.9rem;
+  font-size: 1rem;
+}
+
+.setup-orientation-button {
+  padding: 0.7rem 1rem;
+  font-size: 1.05rem;
+}
+
+.setup-cta {
+  gap: 0.75rem;
+  margin: 1.058rem -1rem 0;
+  padding: 0.75rem 1rem 0.25rem;
+}
+
+.setup-home {
+  width: 3.25rem;
+  height: 3.25rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 4px 0 #354b60,
+    0 9px 18px rgba(0, 0, 0, 0.24);
+}
+
+.setup-home-icon {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.setup-start {
+  padding: 0.95rem clamp(2rem, 7vw, 5rem);
+  font-size: 1.35rem;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.32),
+    0 5px 0 #aa7c2e,
+    0 11px 22px rgba(247, 208, 112, 0.2);
+}
+
+.setup-start:hover {
+  filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.38),
+    0 7px 0 #aa7c2e,
+    0 16px 28px rgba(247, 208, 112, 0.28);
+}
+
+.setup-start:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.24),
+    0 2px 0 #aa7c2e,
+    0 7px 16px rgba(247, 208, 112, 0.18);
+}
+
+.setup-home:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 1px 0 #354b60,
+    0 5px 10px rgba(0, 0, 0, 0.2);
+}
+
+.setup-home:hover {
+  border-color: #f7d070 !important;
+}
+
+.setup-home:hover .setup-home-icon {
+  background: #f7d070 !important;
+}
+
+/* 편집 화면의 이전 단계 확인창: 기존 구성 비율을 유지한 채 110% 확대 */
+.editor-back-modal {
+  width: calc(100% - 2.2rem);
+  max-width: 26.125rem;
+  gap: 1.65rem;
+  padding: 1.65rem 2.2rem 2.2rem;
+  border-radius: 1.1rem;
+}
+
+.editor-back-modal-message {
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.editor-back-modal-icon {
+  display: flex;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.275rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border: 2px solid #f7d070;
+  border-radius: 50%;
+  background: rgba(247, 208, 112, 0.1);
+  color: #f7d070;
+}
+
+.editor-back-modal-icon::before,
+.editor-back-modal-icon::after {
+  content: '';
+  width: 0.3rem;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+.editor-back-modal-icon::before {
+  height: 0.95rem;
+}
+
+.editor-back-modal-icon::after {
+  height: 0.3rem;
+}
+
+.editor-back-modal-title {
+  font-size: 1.21rem;
+}
+
+.editor-back-modal-copy {
+  font-size: 0.9625rem;
+}
+
+.editor-back-modal-actions {
+  gap: 0.825rem;
+}
+
+.editor-back-modal-button {
+  padding: 0.825rem 0;
+  font-size: 1.1rem;
+}
+
+@media (min-width: 900px) {
+  .setup-shell {
+    justify-content: center;
+  }
+
+  .setup-content {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1.25rem;
+    row-gap: 1.25rem;
+  }
+
+  .setup-title,
+  .setup-import-wrap,
+  .setup-import,
+  .setup-summary,
+  .setup-orientation,
+  .setup-cta {
+    grid-column: 1 / -1;
+  }
+
+  .setup-title {
+    margin-bottom: 0.747rem;
+  }
+
+  .setup-summary {
+    margin-bottom: 0.25rem;
+  }
+
+  .setup-ratio {
+    grid-column: 1;
+  }
+
+  .setup-levels {
+    grid-column: 2;
+  }
+
+  .setup-cta {
+    position: static;
+    margin: 0.965rem 0 0;
+    padding: 0.125rem 0 0;
+    background: none !important;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 980px) {
+  .setup-card-name {
+    font-size: 1.05rem;
+  }
+
+  .setup-grid-size {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 900px) {
+  .setup-shell {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .setup-content {
+    row-gap: 0.625rem;
+  }
+
+  .setup-title h1 {
+    font-size: 2rem;
+  }
+
+  .setup-title {
+    margin-bottom: 0.374rem;
+  }
+
+  .setup-title p {
+    margin-top: 0.2rem;
+    font-size: 0.9rem;
+  }
+
+  .setup-import {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .setup-summary {
+    margin-bottom: 0.125rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .setup-summary-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .setup-card {
+    height: 9.25rem;
+    gap: 0.5rem;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+  }
+
+  .setup-ratio-preview {
+    height: 2.8rem;
+  }
+
+  .setup-card-name {
+    font-size: 1.2rem;
+  }
+
+  .setup-grid-size {
+    font-size: 1.35rem;
+  }
+
+  .setup-level-badge {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.875rem;
+  }
+
+  .setup-card-description {
+    display: none;
+  }
+
+  .setup-home {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .setup-start {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  .setup-cta {
+    margin-top: 0.51rem;
+  }
+}
+
+@media (max-height: 720px) {
+  .entry-content {
+    gap: 0.625rem;
+  }
+
+  .pixel-board-preview {
+    max-width: 11rem;
+    padding: 0.6rem;
+    margin-bottom: 4px;
+  }
+
+  .entry-input-wrap {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .entry-button {
+    padding-top: 0.95rem;
+    padding-bottom: 0.95rem;
+  }
+}
+
+@media (max-width: 1399px) {
+  .entry-title {
+    font-size: 6rem;
+    letter-spacing: 1px;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 899px) {
+  .entry-title {
+    font-size: 5rem;
+    gap: 26px;
+  }
+}
+
+@media (max-width: 699px) {
+  .entry-title {
+    font-size: 3.5rem;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 449px) {
+  .entry-title {
+    font-size: clamp(2rem, 9.5vw, 2.5rem);
+    gap: clamp(10px, 3vw, 13px);
+  }
+
+  .setup-title h1 {
+    font-size: clamp(1.625rem, 8.2vw, 2rem);
+  }
+
+  .setup-card-name {
+    font-size: 1.2rem;
+  }
+
+  .setup-grid-size {
+    font-size: 1.1rem;
+  }
 }
 
 @keyframes pixel-float {
@@ -42,11 +640,44 @@ canvas {
 .doan-print-header { display: none; }
 
 @media print {
+  /* 브라우저가 종이 상하단에 자동으로 붙이는 날짜/제목/URL 헤더·푸터는
+     페이지 여백(margin) 안에 그려진다. margin을 0으로 없애면 그 공간이
+     사라져 헤더·푸터가 함께 사라진다. 대신 내용이 종이 끝에 바로 붙지
+     않도록 각 인쇄 컨테이너(#doan-print-area, .app-print-area)에 자체
+     padding을 둬서 균형을 맞춘다. */
+  @page {
+    margin: 0;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  /* 사용자가 브라우저 인쇄 설정의 '배경 그래픽'을 체크하지 않아도
+     색상 배경/그림자가 흑백으로 빠지지 않고 항상 그대로 인쇄되도록 강제. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* visibility 전환에 transition-all이 걸려 있으면 인쇄 스냅샷 시점에
+     화면 요소(예: 자동 저장 표시 텍스트)가 잠깐 비쳐 보일 수 있다.
+     인쇄 시에는 모든 transition/animation을 강제로 끈다. */
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
   .doan-no-print { display: none !important; }
 
   body * { visibility: hidden; }
   #doan-print-area,
   #doan-print-area * { visibility: visible; }
+
+  /* 도안(DoanView) 전용이 아닌 다른 인쇄 화면(교사 학급 만들기/관리 대시보드의 참여 코드·
+     로그인 카드 인쇄 등)도 이 allowlist에 포함시켜야 위 body * 규칙에 가려지지 않는다. */
+  .app-print-area,
+  .app-print-area * { visibility: visible; }
 
   /* 인쇄 전용 헤더 표시 */
   .doan-print-header { display: block !important; }

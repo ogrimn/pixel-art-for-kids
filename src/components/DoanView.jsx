@@ -1,6 +1,8 @@
 import { useRef, useEffect, useMemo } from 'react'
 
-const ACCENT = '#10B981'
+const ACCENT_YELLOW = '#f7d070'
+const PAGE_BG = '#1a1c1e'
+const PANEL_BG = '#111214'
 
 function getTextColor(hex) {
   if (!hex || hex.length < 7) return '#333333'
@@ -20,6 +22,8 @@ function buildColorMap(pixels, rows, cols) {
   return Object.fromEntries(colors.map((c, i) => [c, i + 1]))
 }
 
+// 도안 캔버스 자체는 항상 흰 배경 + 진한 글자로 직접 그린다(비트맵) — 화면 테마와
+// 무관하게 늘 인쇄하기 좋은 배색을 유지하므로, 다크 테마 적용과 별개로 손댈 필요가 없다.
 function drawCells(ctx, pixels, colorMap, cols, rows, cs) {
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, cols * cs, rows * cs)
@@ -74,6 +78,7 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
     drawCells(canvas.getContext('2d'), pixels, colorMap, gridCols, gridRows, displayCs)
   }, [pixels, colorMap, displayCs, gridCols, gridRows])
 
+  // PNG로 내보낼 때도 인쇄와 동일하게 항상 흰 배경 + 진한 글자로 고정 — 화면 다크 테마와 무관.
   const handleSavePNG = () => {
     const cs = Math.max(20, Math.ceil(800 / Math.max(gridCols, gridRows)))
     const pad = cs * 2
@@ -132,12 +137,18 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
   return (
     <div className="flex flex-col w-full" style={{ height: '100%' }}>
 
-      {/* ── Toolbar (hidden on print) ─────────────────── */}
-      <div className="doan-no-print flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100 flex-shrink-0">
+      {/* ── Toolbar (인쇄 시 완전히 숨김 — doan-no-print) ─────────────────── */}
+      <div
+        className="doan-no-print flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+        style={{ background: PAGE_BG, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+      >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-black text-gray-800">숫자 색칠 도안</span>
+          <span className="font-pixel text-sm text-white">숫자 색칠 도안</span>
           {entries.length > 0 && (
-            <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+            <span
+              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+              style={{ background: PANEL_BG, color: '#9ca3af' }}
+            >
               {entries.length}가지 색상
             </span>
           )}
@@ -145,41 +156,44 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
+            className="font-pixel flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors hover:brightness-125"
+            style={{ background: PANEL_BG, color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.15)' }}
           >
             ⎙ 인쇄하기
           </button>
           <button
             onClick={handleSavePNG}
             disabled={entries.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-30"
-            style={{ background: ACCENT }}
+            className="font-pixel flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-black transition-all hover:brightness-105 disabled:opacity-30"
+            style={{ background: ACCENT_YELLOW }}
           >
             ↓ 이미지 저장
           </button>
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-100 transition-colors"
+            className="font-pixel flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm transition-colors hover:brightness-125"
+            style={{ background: PANEL_BG, color: '#9ca3af', border: '1px solid rgba(255,255,255,0.15)' }}
           >
             ✕ 닫기
           </button>
         </div>
       </div>
 
-      {/* ── Print area ───────────────────────────────── */}
+      {/* ── Print area ───────────────────────────────────────────────────
+          화면에서는 다크 테마(PAGE_BG)로 보이지만, 인쇄할 때는 print:!bg-white가
+          어떤 인라인 배경색보다도(!important) 우선해 항상 흰 배경으로 강제 반전된다. */}
       <div
         id="doan-print-area"
-        className="flex-1 overflow-y-auto"
-        style={{ background: '#F9FAFB', padding: 24 }}
+        className="flex-1 overflow-y-auto print:!bg-white"
+        style={{ background: PAGE_BG, padding: 24 }}
       >
         {entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4" style={{ minHeight: 260 }}>
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl bg-gray-100">🎨</div>
-            <p className="text-sm font-bold text-gray-400">캔버스에 그림을 먼저 그려주세요</p>
+          <div className="h-full flex flex-col items-center justify-center gap-4">
+            <p className="font-pixel-kr text-lg sm:text-xl font-bold text-gray-500">캔버스에 그림을 먼저 그려주세요</p>
             <button
               onClick={onClose}
-              className="text-xs font-semibold hover:underline"
-              style={{ color: ACCENT }}
+              className="font-pixel-kr text-xs font-semibold hover:underline"
+              style={{ color: ACCENT_YELLOW }}
             >
               ← 편집으로 돌아가기
             </button>
@@ -187,7 +201,7 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
         ) : (
           <div className="flex flex-col items-center gap-5">
 
-            {/* ── 인쇄 전용 헤더 — 화면에서 숨김, 출력 시에만 표시 ── */}
+            {/* ── 인쇄 전용 헤더 — 화면에서 숨김, 출력 시에만 표시(원래부터 흰 배경 기준 진한 색) ── */}
             <div className="doan-print-header w-full">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 {/* 로고 */}
@@ -218,10 +232,12 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
               <div style={{ height: 1.5, background: '#E5E7EB', marginTop: 14 }} />
             </div>
 
-            {/* Diagram canvas */}
+            {/* Diagram canvas — 캔버스 자체는 항상 흰 배경(drawCells)이라 그대로 두고,
+                감싸는 카드만 화면에서 다크 톤으로 보이게 한다. 인쇄 시에는 기존 .doan-canvas-wrap
+                규칙이 background/box-shadow를 !important로 지워 부모의 흰 배경이 그대로 드러난다. */}
             <div
-              className="doan-canvas-wrap bg-white rounded-2xl p-4 overflow-auto"
-              style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}
+              className="doan-canvas-wrap rounded-2xl p-4 overflow-auto"
+              style={{ background: PANEL_BG, boxShadow: '0 2px 12px rgba(0,0,0,0.35)' }}
             >
               <canvas
                 ref={canvasRef}
@@ -231,14 +247,15 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
 
             {/* Color legend */}
             <div
-              className="doan-legend-wrap bg-white rounded-2xl p-4"
+              className="doan-legend-wrap rounded-2xl p-4"
               style={{
+                background: PANEL_BG,
                 maxWidth: Math.min(gridCols * displayCs + 32, window.innerWidth - 80),
                 width: '100%',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
               }}
             >
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-3 text-gray-500 print:!text-black">
                 색상 가이드
               </p>
               <div className="flex flex-wrap gap-2">
@@ -250,7 +267,8 @@ export default function DoanView({ pixels, gridCols, gridRows, onClose }) {
                     style={{
                       background: color,
                       color: getTextColor(color),
-                      boxShadow: '0 0 0 1px rgba(0,0,0,0.10)',
+                      // 중간 톤 회색 테두리 — 화면의 어두운 배경과 인쇄 시 흰 배경 둘 다에서 잘 보인다.
+                      boxShadow: '0 0 0 1px rgba(128,128,128,0.6)',
                     }}
                   >
                     {num}

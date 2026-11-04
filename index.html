@@ -2,9 +2,13 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 아이들이 핀치 줌으로 화면을 확대해 헤더/도구 버튼이 화면 밖으로 밀려나는 문제를
+         막기 위해 확대·축소 자체를 비활성화한다 (maximum-scale=1 + user-scalable=no). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>픽셀아트</title>
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/DungGeunMo.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/PressStart2P.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/otf" href="/fonts/Moneygraphy-Pixel.otf" crossorigin>
   </head>
   <body>
     <div id="root"></div>
