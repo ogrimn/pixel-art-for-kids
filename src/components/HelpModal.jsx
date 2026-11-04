@@ -14,7 +14,7 @@ function Row({ icon, wide, children }) {
       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
         {icon}
       </div>
-      <p className="font-code text-[14px] text-gray-300 leading-snug">{children}</p>
+      <p className="font-code text-[16.94px] text-gray-300 leading-snug">{children}</p>
     </div>
   )
 }
@@ -32,13 +32,13 @@ function ExpandableRow({ icon, summary, details }) {
         <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
           {icon}
         </div>
-        <p className="flex-1 font-code text-[14px] text-gray-300 leading-snug">{summary}</p>
+        <p className="flex-1 font-code text-[16.94px] text-gray-300 leading-snug">{summary}</p>
         <span className="text-gray-500 text-xs flex-shrink-0">{open ? '▲' : '▼'}</span>
       </button>
       {open && (
         <div className="flex flex-col gap-1.5 pb-3 px-5 pl-[3.75rem]">
           {details.map((d, i) => (
-            <p key={i} className="font-code text-[13px] text-gray-400 leading-snug">· {d}</p>
+            <p key={i} className="font-code text-[15.73px] text-gray-400 leading-snug">· {d}</p>
           ))}
         </div>
       )}
@@ -89,7 +89,7 @@ export default function HelpModal({ onClose }) {
         <div className="flex-1 overflow-y-auto px-6 pt-0 pb-5 flex flex-col gap-4">
 
           <div className="flex flex-col gap-2">
-            <p className="font-pixel text-lg font-bold tracking-tight" style={{ color: '#9ca3af' }}>
+            <p className="font-pixel text-lg font-bold tracking-tight" style={{ color: ACCENT_YELLOW }}>
               그리기 기능
             </p>
 
@@ -139,7 +139,7 @@ export default function HelpModal({ onClose }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <p className="font-pixel text-lg font-bold tracking-tight" style={{ color: '#9ca3af' }}>
+            <p className="font-pixel text-lg font-bold tracking-tight" style={{ color: ACCENT_YELLOW }}>
               나가기 기능
             </p>
 
@@ -154,7 +154,7 @@ export default function HelpModal({ onClose }) {
         <div className="px-6 py-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <button
             onClick={onClose}
-            className="font-pixel w-full py-4 rounded-full text-lg text-black font-bold transition-all hover:brightness-105 active:scale-[0.98]"
+            className="font-pixel w-full py-4 rounded-full text-xl text-black font-bold transition-all hover:brightness-105 active:scale-[0.98]"
             style={{ background: ACCENT_YELLOW }}
           >
             닫기

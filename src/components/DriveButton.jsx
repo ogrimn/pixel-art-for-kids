@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useDrive, signIn, signOut } from '../utils/googleDrive'
 
@@ -48,10 +48,13 @@ export default function DriveButton({ onError }) {
   const drive = useDrive()
   const [showConnect, setShowConnect] = useState(false)
   const [showAccount, setShowAccount] = useState(false)
+  const [tooltipPos, setTooltipPos] = useState(null)
+  const buttonRef = useRef(null)
 
   if (drive.status === 'disabled') return null
 
   const handleSignIn = () => {
+    setTooltipPos(null)
     setShowConnect(false)
     signIn().catch(e => {
       const msg = signInErrorMessage(e)
@@ -60,14 +63,27 @@ export default function DriveButton({ onError }) {
   }
 
   const roundBtn = 'font-pixel w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors hover:brightness-125'
+  const tooltipText = drive.status === 'signedIn'
+    ? '구글 드라이브 연결됨'
+    : drive.status === 'expired'
+      ? '구글 드라이브 다시 연결'
+      : '구글 드라이브에 저장하기'
+  const showTooltip = () => {
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    setTooltipPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 })
+  }
+  const hideTooltip = () => setTooltipPos(null)
 
   return (
     <>
       {drive.status === 'signedIn' ? (
         <button
-          onClick={() => setShowAccount(true)}
-          title="구글 드라이브 연결됨"
+          ref={buttonRef}
+          onClick={() => { hideTooltip(); setShowAccount(true) }}
           aria-label="구글 드라이브 연결됨"
+          onMouseEnter={showTooltip}
+          onMouseLeave={hideTooltip}
           className={`${roundBtn} overflow-hidden`}
           style={{ background: PANEL_BG, border: '2px solid #86efac' }}
         >
@@ -79,7 +95,11 @@ export default function DriveButton({ onError }) {
         </button>
       ) : drive.status === 'expired' ? (
         <button
+          ref={buttonRef}
           onClick={handleSignIn}
+          aria-label="구글 드라이브 다시 연결"
+          onMouseEnter={showTooltip}
+          onMouseLeave={hideTooltip}
           className="font-pixel flex items-center gap-2 h-10 px-4 rounded-full text-sm shrink-0 whitespace-nowrap hover:brightness-125"
           style={{ background: PANEL_BG, color: ACCENT_YELLOW, border: `1px solid ${ACCENT_YELLOW}` }}
         >
@@ -88,15 +108,27 @@ export default function DriveButton({ onError }) {
         </button>
       ) : (
         <button
-          onClick={() => setShowConnect(true)}
+          ref={buttonRef}
+          onClick={() => { hideTooltip(); setShowConnect(true) }}
           disabled={drive.status === 'connecting'}
-          title="구글 드라이브에 저장하기"
           aria-label="구글 드라이브에 저장하기"
+          onMouseEnter={showTooltip}
+          onMouseLeave={hideTooltip}
           className={`${roundBtn} text-white disabled:opacity-40`}
           style={{ background: PANEL_BG }}
         >
           <CloudIcon className={`w-5 h-5 ${drive.status === 'connecting' ? 'animate-pulse' : ''}`} />
         </button>
+      )}
+
+      {tooltipPos && createPortal(
+        <span
+          className="font-pixel-kr pointer-events-none fixed z-[999] -translate-x-1/2 whitespace-nowrap rounded-md px-2 py-1 text-[10px] text-white"
+          style={{ top: tooltipPos.top, left: tooltipPos.left, background: '#000000' }}
+        >
+          {tooltipText}
+        </span>,
+        document.body
       )}
 
       {showConnect && (
