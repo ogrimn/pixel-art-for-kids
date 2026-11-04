@@ -617,6 +617,10 @@ canvas {
     font-size: 2.5rem;
     gap: 13px;
   }
+
+  .setup-title h1 {
+    font-size: clamp(1.75rem, 8.2vw, 2rem);
+  }
 }
 
 @keyframes pixel-float {
