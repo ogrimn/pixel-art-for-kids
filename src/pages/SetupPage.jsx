@@ -3,6 +3,10 @@ import { BASE_GRIDS } from '../utils/gridPresets'
 import { loadImageFile, detectArtwork } from '../utils/importArtwork'
 
 const ACCENT_YELLOW = '#f7d070'
+const ACCENT_BLUE = '#6f9bc4'
+const SOFT_BLUE = '#e5edf5'
+const SELECTED_BG = '#192633'
+const MUTED_BLUE = '#8fa9bf'
 const DANGER = '#f87171'
 const PAGE_BG = '#1a1c1e'
 const PANEL_BG = '#111214'
@@ -14,9 +18,9 @@ const RATIOS = [
 ]
 
 const LEVELS = [
-  { badge: '쉬움',   desc: '큼직한 픽셀로 편하게',   dotCount: 3, dotSize: 14 },
-  { badge: '보통',   desc: '딱 알맞은 크기예요',     dotCount: 4, dotSize: 10 },
-  { badge: '어려움', desc: '섬세하게 표현 가능해요', dotCount: 5, dotSize: 7 },
+  { badge: '쉬움',   dotCount: 3, dotSize: 16 },
+  { badge: '보통',   dotCount: 4, dotSize: 12 },
+  { badge: '어려움', dotCount: 5, dotSize: 9 },
 ]
 
 function isBaseOrientation(ratioId, orientation) {
@@ -53,7 +57,7 @@ function MiniGrid({ count, size, active }) {
             width: size,
             height: size,
             background: active
-              ? (i % 5 === 0 || i % 7 === 0 ? '#000000' : 'rgba(0,0,0,0.35)')
+              ? (i % 5 === 0 || i % 7 === 0 ? SOFT_BLUE : ACCENT_BLUE)
               : (i % 5 === 0 || i % 7 === 0 ? '#4b5560' : '#2a2d30'),
           }}
         />
@@ -135,20 +139,26 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
 
             {/* Title */}
             <div className="setup-title text-center">
-              <h1 className="whitespace-nowrap leading-tight text-white">
+              <h1
+                className="font-pixel whitespace-nowrap leading-tight"
+                style={{
+                  color: SOFT_BLUE,
+                  textShadow: '1px 1px 0 #aebfd0, 2px 2px 0 #748da4, 0 0 18px rgba(111,155,196,0.12)',
+                }}
+              >
                 어떤 크기에 그릴까요?
               </h1>
               <p className="text-gray-400">화면 비율과 픽셀 해상도를 골라요</p>
             </div>
 
             {/* ── 이어 그리기: 저장한 그림 불러오기 ─────────────────── */}
-            <div>
+            <div className="setup-import-wrap">
               <div
                 className="setup-import flex flex-col sm:flex-row sm:items-center justify-between rounded-2xl"
-                style={{ background: PANEL_BG, border: '1px dashed rgba(247,208,112,0.45)' }}
+                style={{ background: PANEL_BG, border: '1px dashed rgba(111,155,196,0.42)' }}
               >
                 <div className="min-w-0">
-                  <p className="setup-import-title text-white">지난번에 그리던 그림이 있나요?</p>
+                  <p className="setup-import-title font-pixel-kr text-white">지난번에 그리던 그림이 있나요?</p>
                   <p className="setup-import-description text-gray-400 mt-1 leading-snug break-keep">
                     저장한 그림 파일을 불러오면 크기를 고르지 않아도 그대로 이어서 그려요
                   </p>
@@ -156,8 +166,12 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                 <button
                   onClick={() => importInputRef.current?.click()}
                   disabled={importing}
-                  className="setup-import-button shrink-0 rounded-full text-black transition-all hover:brightness-105 active:scale-[0.97] disabled:opacity-50"
-                  style={{ background: ACCENT_YELLOW }}
+                  className="setup-import-button font-pixel shrink-0 rounded-full transition-all disabled:opacity-50"
+                  style={{
+                    background: 'rgba(111,155,196,0.1)',
+                    border: `1px solid ${ACCENT_BLUE}`,
+                    color: SOFT_BLUE,
+                  }}
                 >
                   {importing ? '여는 중...' : '그림 불러오기'}
                 </button>
@@ -176,31 +190,31 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
 
             <div
               className="setup-summary hidden sm:flex items-center justify-between rounded-2xl"
-              style={{ background: PANEL_BG }}
+              style={{ background: PANEL_BG, border: '1px solid rgba(111,155,196,0.22)' }}
             >
               <div className="flex items-center gap-4">
                 <div
                   className="setup-summary-icon flex items-center justify-center rounded-xl border-2"
-                  style={{ borderColor: ACCENT_YELLOW }}
+                  style={{ borderColor: ACCENT_BLUE }}
                 >
                   <div
                     className="rounded-sm"
                     style={{
                       width: getPreviewBox(ratio, orientation).w * 0.55,
                       height: getPreviewBox(ratio, orientation).h * 0.55,
-                      background: ACCENT_YELLOW,
+                      background: ACCENT_BLUE,
                     }}
                   />
                 </div>
                 <div>
                   <p className="setup-kicker font-bold text-gray-400">선택한 캔버스</p>
-                  <p className="setup-summary-value text-white">
+                  <p className="setup-summary-value font-pixel-kr" style={{ color: SOFT_BLUE }}>
                     {selectedRatio.label} · {grid.cols} × {grid.rows}
                   </p>
                 </div>
               </div>
               <span
-                className="setup-summary-badge rounded-full text-black"
+                className="setup-summary-badge font-pixel rounded-full text-black"
                 style={{ background: ACCENT_YELLOW }}
               >
                 {selectedLevel.badge}
@@ -209,7 +223,7 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
 
             {/* ── 비율 선택 ────────────────────────────────────── */}
             <section className="setup-ratio">
-              <p className="setup-kicker setup-section-title font-bold text-gray-400">
+              <p className="setup-kicker setup-section-title font-bold" style={{ color: MUTED_BLUE }}>
                 화면 비율
               </p>
               <div className="setup-card-grid grid grid-cols-3">
@@ -221,7 +235,11 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                       key={r.id}
                       onClick={() => setRatio(r.id)}
                       className="setup-card flex flex-col items-center rounded-2xl transition-all active:scale-[0.98]"
-                      style={{ background: active ? ACCENT_YELLOW : PANEL_BG }}
+                      style={{
+                        background: active ? SELECTED_BG : PANEL_BG,
+                        border: active ? `2px solid ${ACCENT_BLUE}` : '2px solid transparent',
+                        boxShadow: active ? '0 10px 26px rgba(111,155,196,0.08)' : 'none',
+                      }}
                     >
                       {/* 비율 시각화 */}
                       <div className="setup-ratio-preview flex items-end justify-center">
@@ -230,17 +248,17 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                           style={{
                             width: `clamp(${Math.round(box.w * 0.62)}px, 10vw, ${box.w}px)`,
                             height: `clamp(${Math.round(box.h * 0.62)}px, 10vw, ${box.h}px)`,
-                            background: active ? '#000000' : '#4b5560',
+                            background: active ? ACCENT_BLUE : '#4b5560',
                           }}
                         />
                       </div>
                       <div className="text-center">
-                        <p className="setup-card-name" style={{ color: active ? '#000000' : '#e2e8f0' }}>
+                        <p className="setup-card-name font-pixel-kr" style={{ color: active ? SOFT_BLUE : '#e2e8f0' }}>
                           {r.label}
                         </p>
                         <p
                           className="setup-card-description hidden sm:block mt-1 leading-snug"
-                          style={{ color: active ? 'rgba(0,0,0,0.6)' : '#9ca3af' }}
+                          style={{ color: active ? '#b7cce0' : '#9ca3af' }}
                         >
                           {r.sublabel}
                         </p>
@@ -253,7 +271,7 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
 
             {/* ── 해상도 선택 ──────────────────────────────────── */}
             <section className="setup-levels">
-              <p className="setup-kicker setup-section-title font-bold text-gray-400">
+              <p className="setup-kicker setup-section-title font-bold" style={{ color: MUTED_BLUE }}>
                 픽셀 해상도
               </p>
               <div className="setup-card-grid grid grid-cols-3">
@@ -265,34 +283,32 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                       key={lv.badge}
                       onClick={() => setLevelIndex(i)}
                       className="setup-card flex flex-col items-center rounded-2xl transition-all active:scale-[0.98]"
-                      style={{ background: active ? ACCENT_YELLOW : PANEL_BG }}
+                      style={{
+                        background: active ? SELECTED_BG : PANEL_BG,
+                        border: active ? `2px solid ${ACCENT_BLUE}` : '2px solid transparent',
+                        boxShadow: active ? '0 10px 26px rgba(111,155,196,0.08)' : 'none',
+                      }}
                     >
                       {/* 미니 픽셀 그리드 */}
                       <MiniGrid count={lv.dotCount} size={lv.dotSize} active={active} />
 
                       {/* 격자 크기 */}
-                      <p className="setup-grid-size font-pixel-en whitespace-nowrap tabular-nums" style={{ color: active ? '#000000' : '#e2e8f0' }}>
+                      <p className="setup-grid-size font-pixel whitespace-nowrap tabular-nums" style={{ color: active ? SOFT_BLUE : '#e2e8f0' }}>
                         {g.cols} × {g.rows}
                       </p>
 
                       {/* 난이도 뱃지 */}
                       <span
-                        className="setup-level-badge rounded-full"
+                        className="setup-level-badge font-pixel rounded-full"
                         style={{
-                          background: active ? 'rgba(0,0,0,0.15)' : 'transparent',
+                          background: active ? ACCENT_YELLOW : 'transparent',
                           color: active ? '#000000' : ACCENT_YELLOW,
-                          border: active ? 'none' : `1px solid ${ACCENT_YELLOW}`,
+                          border: `1px solid ${ACCENT_YELLOW}`,
                         }}
                       >
                         {lv.badge}
                       </span>
 
-                      <p
-                        className="setup-card-description hidden sm:block text-center leading-snug"
-                        style={{ color: active ? 'rgba(0,0,0,0.6)' : '#9ca3af' }}
-                      >
-                        {lv.desc}
-                      </p>
                     </button>
                   )
                 })}
@@ -302,7 +318,7 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
             {/* ── 화면 방향 선택 (정사각형 제외) ───────────────────── */}
             {selectedRatio.hasOrientation && (
               <section className="setup-orientation">
-                <p className="setup-kicker setup-section-title font-bold text-gray-400">
+                <p className="setup-kicker setup-section-title font-bold" style={{ color: MUTED_BLUE }}>
                   화면 방향
                 </p>
                 <div className="grid grid-cols-2 gap-2">
@@ -315,10 +331,11 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                       <button
                         key={o.id}
                         onClick={() => setOrientation(o.id)}
-                        className="setup-orientation-button rounded-xl transition-all active:scale-[0.98]"
+                        className="setup-orientation-button font-pixel rounded-xl transition-all active:scale-[0.98]"
                         style={{
-                          background: active ? ACCENT_YELLOW : PANEL_BG,
-                          color: active ? '#000000' : '#e2e8f0',
+                          background: active ? SELECTED_BG : PANEL_BG,
+                          color: active ? SOFT_BLUE : '#e2e8f0',
+                          border: active ? `2px solid ${ACCENT_BLUE}` : '2px solid transparent',
                         }}
                       >
                         {o.label}
@@ -337,14 +354,14 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
               <button
                 onClick={onGoHome}
                 title="처음으로"
-                className="setup-home flex-shrink-0 rounded-full flex items-center justify-center transition-all hover:brightness-125 active:scale-[0.97]"
-                style={{ background: PANEL_BG, border: `1px solid ${ACCENT_YELLOW}` }}
+                className="setup-home flex-shrink-0 rounded-full flex items-center justify-center transition-all hover:brightness-125"
+                style={{ background: PANEL_BG, border: '1px solid rgba(111,155,196,0.55)' }}
               >
                 <span
                   aria-hidden="true"
                   className="setup-home-icon"
                   style={{
-                    background: ACCENT_YELLOW,
+                    background: ACCENT_BLUE,
                     WebkitMaskImage: 'url(/images/home.png)',
                     maskImage: 'url(/images/home.png)',
                     WebkitMaskSize: 'contain',
@@ -358,8 +375,8 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
               </button>
               <button
                 onClick={() => onNext({ ...grid, ratio, orientation })}
-                className="setup-start flex-1 sm:flex-none rounded-full text-black transition-all hover:brightness-105 active:scale-[0.97]"
-                style={{ background: ACCENT_YELLOW, boxShadow: '0 8px 24px rgba(247,208,112,0.25)' }}
+                className="setup-start font-pixel flex-1 sm:flex-none rounded-full text-black transition-all"
+                style={{ background: ACCENT_YELLOW }}
               >
                 {grid.cols} × {grid.rows} 그리기 →
               </button>

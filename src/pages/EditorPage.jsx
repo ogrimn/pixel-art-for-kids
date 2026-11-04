@@ -873,7 +873,7 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
                     className="w-3.5 h-3.5 rounded border border-dashed flex-shrink-0"
                     style={{ background: selectedColor, borderColor: 'rgba(255,255,255,0.3)' }}
                   />
-                  <span className="font-code text-xs text-gray-400 font-medium">직접 선택…</span>
+                  <span className="font-code text-sm text-gray-400 font-medium">직접 선택…</span>
                 </div>
                 <input
                   type="color"
@@ -982,7 +982,7 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
                     >
                       <path strokeLinecap="round" d="M12 5v14M5 12h14" />
                     </svg>
-                    <p className="font-code text-xs text-gray-500 text-center leading-relaxed">
+                    <p className="font-code text-sm text-gray-500 text-center leading-relaxed">
                       밑그림 불러오기<br />(클릭 또는 이미지 드래그)
                     </p>
                   </div>
@@ -1177,23 +1177,24 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
         >
           <div
-            className="rounded-2xl px-8 pt-6 pb-8 flex flex-col items-center gap-6 mx-4"
-            style={{ maxWidth: 380, width: '100%', background: PANEL_BG }}
+            className="editor-back-modal flex flex-col items-center"
+            style={{ background: PANEL_BG }}
           >
             {/* 메시지 */}
-            <div className="text-center flex flex-col gap-2">
-              <p className="font-pixel font-bold text-base text-white">크기 선택 화면으로 돌아갈까요?</p>
-              <p className="font-code text-[14px] text-gray-400 leading-relaxed">
+            <div className="editor-back-modal-message text-center flex flex-col">
+              <div className="editor-back-modal-icon" aria-hidden="true" />
+              <p className="editor-back-modal-title font-pixel font-bold text-white">크기 선택 화면으로 돌아갈까요?</p>
+              <p className="editor-back-modal-copy font-code text-gray-400 leading-relaxed">
                 캔버스 크기 선택 화면으로 돌아갑니다.<br />
                 <span className="font-bold" style={{ color: ACCENT_YELLOW }}>지금 그렸던 그림이 저장되지 않을 수 있어요!</span>
               </p>
             </div>
 
             {/* 버튼 */}
-            <div className="flex gap-3 w-full">
+            <div className="editor-back-modal-actions flex w-full">
               <button
                 onClick={() => setShowBackModal(false)}
-                className="font-pixel font-bold flex-1 py-3 rounded-full text-sm transition-colors active:scale-[0.97]"
+                className="editor-back-modal-button font-pixel font-bold flex-1 rounded-full transition-colors active:scale-[0.97]"
                 style={{ background: 'rgba(255,255,255,0.08)', color: '#e2e8f0' }}
               >
                 취소
@@ -1207,7 +1208,7 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
                   setShowBackModal(false)
                   onGoToSetup()
                 }}
-                className="font-pixel font-bold flex-1 py-3 rounded-full text-sm transition-colors active:scale-[0.97]"
+                className="editor-back-modal-button font-pixel font-bold flex-1 rounded-full transition-colors active:scale-[0.97]"
                 style={{ background: ACCENT_YELLOW, color: '#000000' }}
               >
                 확인
