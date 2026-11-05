@@ -133,7 +133,7 @@ export default function HelpModal({ onClose }) {
               </Row>
 
               <Row icon={<Icon src="/images/downloads.png" alt="그림 저장(PNG)" />}>
-                완성한 도트 그림을 이미지 파일(PNG)로 저장해요.
+                완성한 도트 그림을 이미지 파일(PNG)로 저장해요. 구글 드라이브에 로그인했다면 내 드라이브에 저장돼요.
               </Row>
             </div>
           </div>

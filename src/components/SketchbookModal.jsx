@@ -73,7 +73,7 @@ function EmptyState({ title, desc, children }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-gray-300 px-8 text-center">
       <p className="font-pixel-kr text-lg sm:text-xl font-bold text-gray-400">{title}</p>
-      {desc && <p className="font-pixel-kr text-xs text-gray-400 mt-1 break-keep">{desc}</p>}
+      {desc && <p className="font-code text-xs text-gray-400 mt-1 break-keep">{desc}</p>}
       {children && <div className="pointer-events-auto mt-4">{children}</div>}
     </div>
   )
@@ -203,7 +203,7 @@ function DriveTab({ onEdit, onCountChange }) {
     return (
       <EmptyState
         title={expired ? '드라이브 연결이 끊어졌어요' : '구글 드라이브에 연결해 보세요'}
-        desc="연결하면 다른 기기에서 그린 그림도 여기서 이어 그릴 수 있어요. 학생은 학교에서 허락한 경우에만 로그인해요."
+        desc="연결하면 다른 기기에서 그린 그림도 여기서 이어 그릴 수 있어요."
       >
         <button
           onClick={() => signIn().catch(() => {})}
@@ -218,7 +218,7 @@ function DriveTab({ onEdit, onCountChange }) {
   if (error && !items?.length) return <EmptyState title={error} />
   if (items === null) return <EmptyState title="드라이브에서 불러오는 중..." />
   if (items.length === 0) {
-    return <EmptyState title="드라이브에 저장된 그림이 없어요" desc="로그인한 채로 그림을 그리면 자동으로 저장돼요!" />
+    return <EmptyState title="드라이브에 저장된 그림이 없어요" desc="로그인한 채로 저장 버튼을 누르면 여기에 저장돼요!" />
   }
   return (
     <>

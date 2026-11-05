@@ -21,8 +21,6 @@ const PANEL_BG = '#111214'
 // 항상 최소 1024px, 칸당 최소 32px로 업스케일한 오프스크린 캔버스에 다시 그려 내보낸다.
 const EXPORT_MIN_PX = 1024
 const EXPORT_MIN_CELL_PX = 32
-// 드라이브 저장은 로컬 자동 저장(0.5초)보다 느긋하게 — 그리는 동안 업로드가 계속 쌓이지 않도록
-const DRIVE_SAVE_DELAY = 3000
 
 // 로컬 스케치북 항목에 그 작품이 저장된 드라이브 파일 ID를 함께 기록해 둔다
 function readSketchbook() {
@@ -211,14 +209,15 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   const [saveStatus, setSaveStatus] = useState(resumeArtwork && !resumeArtwork.imported ? 'saved' : 'idle') // 'idle' | 'pending' | 'saved'
   const [isFullscreen, setIsFullscreen] = useState(false)
   const drive = useDrive()
-  const driveSignedIn = drive.status === 'signedIn'
   // 지금 작업 중인 작품이 저장될 드라이브 파일 — driveProjectRef는 이 ID가 어느 슬롯(projectId)의 것인지
   const driveIdRef = useRef(resumeArtwork?.driveId || null)
   const driveProjectRef = useRef(projectIdRef.current)
   const driveQueueRef = useRef(Promise.resolve()) // 업로드가 겹치지 않도록 한 줄로 세운다
-  const driveTimerRef = useRef(null)
-  const lastDriveQueuedRef = useRef(pixels)
+  // 드라이브에는 저장 버튼을 눌렀을 때만 올린다(이 기기 스케치북은 계속 자동 저장).
+  // 로그인 만료(expired) 중에도 저장 버튼은 드라이브 저장으로 두고, 누르면 다시 연결하라고 안내한다.
+  const driveMode = drive.status === 'signedIn' || drive.status === 'expired'
   const [driveSaveStatus, setDriveSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
+  const [driveSavedPixels, setDriveSavedPixels] = useState(null) // 마지막으로 드라이브에 올린 그림
 
   // 브라우저 자체 ESC 키 등으로도 전체화면이 풀릴 수 있어, fullscreenchange를 구독해
   // 버튼 아이콘/상태를 실제 전체화면 여부와 항상 동기화한다.
@@ -486,16 +485,17 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   const persistCurrentSlotRef = useRef(persistCurrentSlot)
   persistCurrentSlotRef.current = persistCurrentSlot
 
-  // 현재 슬롯의 그림을 로그인한 사람의 구글 드라이브에 PNG로 올린다(같은 작품이면 같은 파일을 덮어씀)
-  const syncToDrive = useCallback(() => {
-    if (!driveSignedIn || !isDirty) return
+  // 현재 슬롯의 그림을 로그인한 사람의 구글 드라이브에 PNG로 올린다(같은 작품이면 같은 파일을 덮어씀).
+  // 저장 버튼에서만 부른다. 성공 여부를 돌려준다.
+  const saveToDrive = useCallback(() => {
     const projectId = projectIdRef.current
     const fileName = currentFileNameRef.current || buildDefaultFileName()
+    const savedPixels = pixels
     const blobPromise = getCanvasBlob()
     setDriveSaveStatus('saving')
-    driveQueueRef.current = driveQueueRef.current.then(async () => {
+    const job = driveQueueRef.current.then(async () => {
       const blob = await blobPromise
-      if (!blob) return
+      if (!blob) throw new Error('blob')
       if (driveProjectRef.current !== projectId) {
         driveProjectRef.current = projectId
         driveIdRef.current = readSketchbook().find(it => it.id === projectId)?.driveId || null
@@ -503,48 +503,30 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       const id = await saveArtworkToDrive({ driveId: driveIdRef.current, fileName, blob, cols: gridCols, rows: gridRows })
       if (driveProjectRef.current === projectId) driveIdRef.current = id
       rememberDriveId(projectId, id)
+      setDriveSavedPixels(savedPixels)
       setDriveSaveStatus('saved')
-    }).catch(() => setDriveSaveStatus('error'))
-  }, [driveSignedIn, isDirty, buildDefaultFileName, getCanvasBlob, gridCols, gridRows])
-  const syncToDriveRef = useRef(syncToDrive); syncToDriveRef.current = syncToDrive
+      return true
+    }).catch(() => {
+      setDriveSaveStatus('error')
+      return false
+    })
+    driveQueueRef.current = job
+    return job
+  }, [pixels, buildDefaultFileName, getCanvasBlob, gridCols, gridRows])
 
-  // 예약된 드라이브 저장이 있으면 기다리지 않고 지금 바로 올린다 — 슬롯이 바뀌거나 화면을 떠나기 직전
-  const flushDriveSync = useCallback(() => {
-    if (!driveTimerRef.current) return
-    clearTimeout(driveTimerRef.current)
-    driveTimerRef.current = null
-    syncToDriveRef.current()
-  }, [])
-
-  // 그림이 바뀔 때마다 3초 디바운스 후 드라이브에 저장. 그리다가 로그인했다면 지금까지 그린 그림도
-  // 올라간다(lastDriveQueuedRef는 로그인 상태에서만 갱신되므로 로그인 직후엔 현재 그림과 다르다).
-  useEffect(() => {
-    if (!driveSignedIn || !isDirty) return
-    if (pixels === lastDriveQueuedRef.current) return
-    lastDriveQueuedRef.current = pixels
-    clearTimeout(driveTimerRef.current)
-    driveTimerRef.current = setTimeout(() => {
-      driveTimerRef.current = null
-      syncToDriveRef.current()
-    }, DRIVE_SAVE_DELAY)
-  }, [pixels, driveSignedIn, isDirty])
-
-  // 로그인이 만료돼 저장에 실패했다가 다시 연결하면, 그림을 더 고치지 않아도 바로 다시 올린다
-  useEffect(() => {
-    if (driveSignedIn && driveSaveStatus === 'error') syncToDriveRef.current()
-  }, [driveSignedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 드라이브에 저장한 뒤 그림을 더 고쳤으면 헤더에 "드라이브에 저장 안 됨"을 띄운다 — 디벗이
+  // 초기화되면 이 기기 스케치북이 사라질 수 있어, 저장 버튼을 깜빡하지 않도록 알려 준다.
+  const driveUnsaved = driveMode && isDirty && driveSaveStatus !== 'saving' && pixels !== driveSavedPixels
 
   // 브라우저 뒤로 가기처럼 편집기 내부 버튼을 거치지 않고 화면이 닫혀도 마지막 변경을
-  // 동기적으로 로컬 스케치북에 남긴다. 드라이브의 예약 저장도 함께 즉시 시작한다.
+  // 동기적으로 로컬 스케치북에 남긴다.
   useEffect(() => () => {
     persistCurrentSlotRef.current()
-    flushDriveSync()
-  }, [flushDriveSync])
+  }, [])
 
   const handleClearAll = () => {
     // 캔버스를 비우기 직전까지 그린 그림을 디바운스 없이 즉시 저장
     persistCurrentSlot()
-    flushDriveSync()
     setSaveStatus('saved')
     // 지금까지의 작업은 안전하게 보존했으니, 이제부터의 자동 저장은 새 캔버스를 대상으로 하도록 새 프로젝트 ID 발급
     const nextProjectId = Date.now()
@@ -564,9 +546,13 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   // data: URI를 <a href>로 직접 다운로드하면 크롬(특히 크롬북)이 큰 data URI를
   // "위험할 수 있어 저장되지 않았습니다" 류의 경고로 막는 경우가 있어, 이미 있는
   // getCanvasBlob(Blob 기반)을 ObjectURL로 감싸서 다운로드한다.
-  const handleConfirmSavePNG = useCallback(async () => {
+  const handleConfirmSave = useCallback(async () => {
     const name = saveFileName.trim() || buildDefaultFileName()
-    const blob = await getCanvasBlob()
+    if (driveMode && drive.status === 'expired') {
+      showToast("드라이브 연결이 끊어졌어요. 위의 '드라이브 다시 연결'을 눌러 주세요.")
+      return
+    }
+    const blob = driveMode ? null : await getCanvasBlob()
     if (blob) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -576,31 +562,38 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       URL.revokeObjectURL(url)
     }
 
-    // 스케치북 목록에 이름 기준으로 저장 — 같은 이름이면 덮어쓰기(Update), 다르면 새 항목(Save As = 새 슬롯)
+    // 스케치북 목록에 이름 기준으로 저장 — 같은 이름이면 덮어쓰기(Update), 다르면 새 항목(Save As = 새 슬롯).
+    // 지금 열려 있는 그림과 같은 이름이면 그 슬롯을 그대로 쓴다 — 드라이브에서 막 연 그림처럼 이 기기
+    // 스케치북에 아직 항목이 없어도, 같은 드라이브 파일을 덮어쓰도록.
     const all = JSON.parse(localStorage.getItem(SKETCHBOOK_KEY) || '[]')
-    const existingIdx = all.findIndex(it => it.userName === userName && it.fileName === name)
+    const sameAsCurrent = name === (currentFileNameRef.current || buildDefaultFileName())
+    let existingIdx = sameAsCurrent ? all.findIndex(it => it.id === projectIdRef.current) : -1
+    if (existingIdx < 0) existingIdx = all.findIndex(it => it.userName === userName && it.fileName === name)
     const now = new Date().toISOString()
-    const entryId = existingIdx >= 0 ? all[existingIdx].id : Date.now()
+    const entryId = existingIdx >= 0 ? all[existingIdx].id : sameAsCurrent ? projectIdRef.current : Date.now()
     const entry = { id: entryId, fileName: name, updatedAt: now, ...buildSketchbookEntry() }
     if (existingIdx >= 0) {
       all[existingIdx] = { ...all[existingIdx], ...entry }
-      showToast(`'${name}'에 덮어썼어요!`)
     } else {
       all.unshift({ createdAt: now, ...entry })
-      showToast('그림을 저장했어요!')
     }
     localStorage.setItem(SKETCHBOOK_KEY, JSON.stringify(all.slice(0, 50)))
 
     // 이후 자동 저장이 지금 저장한 이 항목을 계속 덮어쓰도록 세션의 저장 대상을 갱신
-    flushDriveSync()
     projectIdRef.current = entryId
     currentFileNameRef.current = name
     onProjectChange?.({ projectId: entryId, cols: gridCols, rows: gridRows, artwork: entry })
     setSaveStatus('saved')
-    syncToDrive()
-
     setIsSaveModalOpen(false)
-  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, flushDriveSync, syncToDrive, onProjectChange, gridCols, gridRows])
+
+    if (!driveMode) {
+      showToast(existingIdx >= 0 ? `'${name}'에 덮어썼어요!` : '그림을 저장했어요!')
+      return
+    }
+    showToast('드라이브에 저장하는 중...')
+    const ok = await saveToDrive()
+    showToast(ok ? `'${name}'을(를) 드라이브에 저장했어요!` : '드라이브에 저장하지 못했어요. 잠시 후 다시 눌러 주세요.')
+  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, driveMode, drive.status, saveToDrive, onProjectChange, gridCols, gridRows])
 
   // 실시간 자동 저장: 그림이 바뀔 때마다 500ms 디바운스 후 localStorage 스케치북을
   // 현재 프로젝트 ID로 덮어쓴다. pixels 참조가 마지막 예약 시점과 같으면(최초 마운트,
@@ -690,13 +683,14 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
             >
               {saveStatus === 'pending' ? '● 저장 중...' : '✓ 스케치북에 자동 저장됨'}
             </span>
-            {(driveSignedIn || drive.status === 'expired') && driveSaveStatus !== 'idle' && (
+            {driveMode && (driveSaveStatus === 'saving' || driveSaveStatus === 'error' || driveUnsaved || driveSaveStatus === 'saved') && (
               <span
                 className="ml-3 text-sm font-medium whitespace-nowrap"
-                style={{ color: driveSaveStatus === 'error' ? DANGER : driveSaveStatus === 'saving' ? '#fde68a' : '#86efac' }}
+                style={{ color: driveSaveStatus === 'error' ? DANGER : driveSaveStatus === 'saving' || driveUnsaved ? '#fde68a' : '#86efac' }}
               >
-                {driveSaveStatus === 'saving' ? '● 드라이브에 올리는 중...'
-                  : driveSaveStatus === 'error' ? '! 드라이브 저장 안 됨' : '✓ 드라이브에도 저장됨'}
+                {driveSaveStatus === 'saving' ? '● 드라이브에 저장 중...'
+                  : driveSaveStatus === 'error' ? '! 드라이브 저장 실패'
+                  : driveUnsaved ? '● 드라이브에 저장 안 됨' : '✓ 드라이브에 저장됨'}
               </span>
             )}
           </div>
@@ -750,8 +744,8 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
             <HeaderBtn onClick={handleCopyImage} title="그림 복사하기">
               <img src={copyIcon} alt="그림 복사하기" className="w-5 h-5 invert" />
             </HeaderBtn>
-            <HeaderBtn onClick={openSaveModal} title="그림 저장(PNG)">
-              <img src="/images/downloads.png" alt="그림 저장(PNG)" className="w-5 h-5 invert" />
+            <HeaderBtn onClick={openSaveModal} title={driveMode ? '드라이브에 저장' : '그림 저장(PNG)'}>
+              <img src="/images/downloads.png" alt={driveMode ? '드라이브에 저장' : '그림 저장(PNG)'} className="w-5 h-5 invert" />
             </HeaderBtn>
             <div className="w-px h-5 mx-1 shrink-0" style={{ background: 'rgba(255,255,255,0.1)' }} />
             <HeaderBtn onClick={handleToggleFullscreen} title={isFullscreen ? '전체화면 종료' : '전체화면'}>
@@ -1242,9 +1236,11 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
           >
             <div className="flex flex-col gap-2">
               {/* font-pixel은 영문만 Press Start 2P로 바꿔 'PNG'가 크고 다른 모양으로 보여서, 한글 픽셀 폰트 하나로 통일 */}
-              <p className="font-pixel-kr text-base text-white">그림 저장(PNG)</p>
-              <p className="text-sm text-gray-400 leading-relaxed">
-                저장할 파일 이름을 입력해주세요.
+              <p className="font-pixel-kr text-base text-white">{driveMode ? '드라이브에 저장' : '그림 저장(PNG)'}</p>
+              <p className="text-sm text-gray-400 leading-relaxed break-keep">
+                {driveMode
+                  ? "내 구글 드라이브 '픽셀아트' 폴더에 저장해요. 같은 이름이면 덮어써요."
+                  : '저장할 파일 이름을 입력해주세요.'}
               </p>
             </div>
 
@@ -1253,7 +1249,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
               type="text"
               value={saveFileName}
               onChange={e => setSaveFileName(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleConfirmSavePNG() }}
+              onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave() }}
               placeholder={buildDefaultFileName()}
               className="w-full px-4 py-3 rounded-xl text-sm text-white bg-[#111214] border border-white/10 outline-none transition-colors focus:border-[#f7d070]"
             />
@@ -1266,7 +1262,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
                 취소
               </button>
               <button
-                onClick={handleConfirmSavePNG}
+                onClick={handleConfirmSave}
                 className="px-6 py-2.5 rounded-xl text-sm font-bold text-black transition-colors hover:brightness-105 active:scale-[0.97] bg-[#fdd835]"
               >
                 저장
