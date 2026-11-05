@@ -33,7 +33,7 @@ export default function QrInvite() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="font-pixel-kr absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all hover:brightness-125 active:scale-[0.97]"
+        className="font-code absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all hover:brightness-125 active:scale-[0.97]"
         style={{ background: PANEL_BG, color: ACCENT_YELLOW, border: `1px solid ${ACCENT_YELLOW}` }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-4 w-4" aria-hidden="true">
@@ -51,7 +51,7 @@ export default function QrInvite() {
         >
           {/* m-auto: 화면보다 길어져도 위쪽이 잘리지 않고 스크롤되도록(가운데 정렬은 여백으로) */}
           <div className="m-auto flex w-full max-w-xl flex-col items-center gap-5 rounded-2xl px-6 py-7" style={{ background: PANEL_BG }}>
-            <p className="font-pixel-kr text-center text-2xl text-white sm:text-3xl">휴대폰 카메라로 찍어서 들어와요!</p>
+            <p className="font-code text-center text-2xl text-white sm:text-3xl">휴대폰 카메라로 찍어서 들어와요!</p>
             <div className="w-full rounded-2xl bg-white p-3" style={{ maxWidth: 'min(60vh, 520px)' }}>
               {qrSrc ? (
                 <img src={qrSrc} alt={`${url} 접속 QR 코드`} className="block aspect-square w-full" style={{ imageRendering: 'pixelated' }} />
@@ -63,7 +63,7 @@ export default function QrInvite() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="font-pixel-kr rounded-full px-10 py-3 text-base text-black transition-all hover:brightness-105 active:scale-[0.97]"
+              className="font-code rounded-full px-10 py-3 text-base text-black transition-all hover:brightness-105 active:scale-[0.97]"
               style={{ background: ACCENT_YELLOW }}
             >
               닫기
