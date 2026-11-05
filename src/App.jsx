@@ -47,6 +47,9 @@ export default function App() {
     const handlePopState = (event) => {
       const historyPage = event.state?.[HISTORY_PAGE_KEY]
       if (!APP_PAGES.has(historyPage)) return
+      // 브라우저 뒤로 가기로 첫 화면에 도달하는 경우도 공용 기기의 사용자 전환으로
+      // 취급한다. 홈 버튼과 동일하게 진행 중 로그인까지 무효화하고 Drive 세션을 끊는다.
+      if (historyPage === 'entry') signOut()
       if (typeof event.state?.userName === 'string') setUserName(event.state.userName)
       if (historyPage === 'editor') {
         const projectId = event.state?.editorProjectId
