@@ -24,14 +24,14 @@ export const ALL_GRIDS = (() => {
       const key = `${cols}x${rows}`
       if (seen.has(key)) continue
       seen.add(key)
-      list.push({ cols, rows })
+      list.push({ cols, rows, legacy: false })
     }
   }
   for (const { cols, rows } of LEGACY_GRIDS) {
     const key = `${cols}x${rows}`
     if (seen.has(key)) continue
     seen.add(key)
-    list.push({ cols, rows })
+    list.push({ cols, rows, legacy: true })
   }
   return list
 })()

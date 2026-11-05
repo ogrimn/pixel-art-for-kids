@@ -22,6 +22,7 @@ let state = {
   status: GOOGLE_CLIENT_ID ? 'signedOut' : 'disabled',
   user: null,
   gisReady: !GOOGLE_CLIENT_ID,
+  gisLoading: Boolean(GOOGLE_CLIENT_ID),
 }
 const listeners = new Set()
 const setState = (patch) => {
@@ -68,12 +69,20 @@ function loadGis() {
   return gisPromise
 }
 
+function prepareGis() {
+  setState({ gisReady: false, gisLoading: true })
+  return loadGis()
+    .then(() => setState({ gisReady: true, gisLoading: false }))
+    .catch((error) => {
+      setState({ gisReady: false, gisLoading: false })
+      throw error
+    })
+}
+
 // 로그인 버튼을 누르기 전에 GIS를 미리 준비한다. OAuth 팝업 요청은 반드시 실제
 // 클릭 이벤트 안에서 동기적으로 시작해야 브라우저의 팝업 차단에 걸리지 않는다.
 if (GOOGLE_CLIENT_ID) {
-  loadGis()
-    .then(() => setState({ gisReady: true }))
-    .catch(() => setState({ gisReady: false }))
+  prepareGis().catch(() => {})
 }
 
 // 로그인 팝업은 브라우저가 막지 않도록 반드시 버튼 클릭 같은 사용자 동작 안에서 호출해야 한다.
@@ -82,9 +91,7 @@ export function signIn() {
   const prev = state.status
   if (!window.google?.accounts?.oauth2) {
     // 네트워크 오류 등으로 사전 로드가 실패했다면 다음 클릭을 위해 다시 준비한다.
-    loadGis()
-      .then(() => setState({ gisReady: true }))
-      .catch(() => setState({ gisReady: false }))
+    prepareGis().catch(() => {})
     return Promise.reject(new Error('gis_not_ready'))
   }
   setState({ status: 'connecting' })

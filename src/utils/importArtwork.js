@@ -119,7 +119,10 @@ export function detectArtwork(image) {
     && image.height / g.rows >= MIN_CELL_PX)
   if (!fits.length) return { status: 'unsupported' }
 
-  const measured = fits.map(g => measureGrid(image, g.cols, g.rows))
+  const measured = fits.map(g => ({
+    ...measureGrid(image, g.cols, g.rows),
+    legacy: g.legacy,
+  }))
   // 비율이 아니라 "걸친 칸 개수"로 비교한다 — 배경이 대부분인 그림은 틀린 격자로 나눠도
   // 걸친 칸이 한두 개뿐이라, 비율로 보면 틀린 격자도 맞는 것처럼 보이기 때문.
   const best = Math.min(...measured.map(m => m.mixed))
@@ -128,8 +131,22 @@ export function detectArtwork(image) {
   const clean = measured
     .filter(m => m.mixed === best && m.mixed <= m.cols * m.rows * CLEAN_RATIO)
     .sort((a, b) => a.cols * a.rows - b.cols * b.rows)
+  const currentClean = clean.filter(m => !m.legacy)
+  const legacyClean = clean.filter(m => m.legacy)
+  // 현재 규격과 예전 규격이 모두 정확히 맞는 단순한 그림은 어느 쪽도 자동 우선하지
+  // 않는다. 미리보기를 보여 주고 사용자가 원래 칸 수를 선택하게 해야 세부 묘사를 잃지 않는다.
+  if (currentClean.length && legacyClean.length) {
+    return {
+      status: 'ambiguous',
+      options: [currentClean[0], legacyClean[0]].map(buildArtwork),
+    }
+  }
   if (clean.length) return { status: 'ok', artwork: buildArtwork(clean[0]) }
 
-  const ranked = [...measured].sort((a, b) => a.mixed / (a.cols * a.rows) - b.mixed / (b.cols * b.rows)).slice(0, 3)
+  const ranked = [...measured]
+    .sort((a, b) =>
+      a.mixed / (a.cols * a.rows) - b.mixed / (b.cols * b.rows)
+      || Number(a.legacy) - Number(b.legacy))
+    .slice(0, 3)
   return { status: 'ambiguous', options: ranked.map(buildArtwork) }
 }

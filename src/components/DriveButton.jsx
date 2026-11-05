@@ -98,7 +98,7 @@ export default function DriveButton({ onError }) {
         <button
           ref={buttonRef}
           onClick={handleSignIn}
-          disabled={!drive.gisReady || drive.status === 'connecting'}
+          disabled={drive.gisLoading || drive.status === 'connecting'}
           aria-label="구글 드라이브 다시 연결"
           onMouseEnter={showTooltip}
           onMouseLeave={hideTooltip}
@@ -159,11 +159,11 @@ export default function DriveButton({ onError }) {
             </button>
             <button
               onClick={handleSignIn}
-              disabled={!drive.gisReady || drive.status === 'connecting'}
+              disabled={drive.gisLoading || drive.status === 'connecting'}
               className="font-pixel font-bold flex-1 py-3 rounded-full text-sm transition-colors active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
               style={{ background: ACCENT_YELLOW, color: '#000000' }}
             >
-              {!drive.gisReady ? '로그인 준비 중...' : drive.status === 'connecting' ? '연결 중...' : '구글로 로그인'}
+              {drive.gisLoading ? '로그인 준비 중...' : !drive.gisReady ? '로그인 다시 준비' : drive.status === 'connecting' ? '연결 중...' : '구글로 로그인'}
             </button>
           </div>
         </Modal>
