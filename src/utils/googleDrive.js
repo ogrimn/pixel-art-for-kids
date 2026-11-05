@@ -103,8 +103,10 @@ export function signIn() {
       callback: (r) => (r.error ? reject(new Error(r.error)) : resolve(r)),
       error_callback: (e) => reject(new Error(e?.type || 'popup_closed')),
     })
-    // 한 번 동의한 계정이면 동의 화면 없이 바로 토큰이 발급된다
-    client.requestAccessToken(prev === 'expired' ? { prompt: '' } : {})
+    // 새로 로그인할 때는 항상 계정 선택 화면을 띄운다 — 형제가 같이 쓰는 휴대폰이나 공용 기기에서
+    // 브라우저에 남아 있는 앞사람의 구글 로그인으로 비밀번호 없이 연결되지 않도록.
+    // 로그인이 만료돼 '다시 연결'할 때만 같은 계정으로 바로 이어 준다.
+    client.requestAccessToken({ prompt: prev === 'expired' ? '' : 'select_account' })
   })
 
   return tokenRequest.then(async (resp) => {
