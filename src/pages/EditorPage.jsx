@@ -9,7 +9,7 @@ import copyIcon from '../assets/copy-icon.png'
 import { decodeTracingBitmap, sampleContainColor } from '../utils/tracingBitmap'
 import { drawLoupe } from '../utils/loupe'
 import { PRESET_COLORS } from '../utils/palette'
-import { useDrive, saveArtworkToDrive } from '../utils/googleDrive'
+import { useDrive, saveArtworkToDrive, listDriveArtworks } from '../utils/googleDrive'
 
 const MAX_HISTORY = 20
 export const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
@@ -23,6 +23,14 @@ const EXPORT_MIN_PX = 1024
 const EXPORT_MIN_CELL_PX = 32
 
 // 로컬 스케치북 항목에 그 작품이 저장된 드라이브 파일 ID를 함께 기록해 둔다
+// 이미 쓰인 이름이면 뒤에 (1), (2), (3)…을 붙여 겹치지 않는 이름을 고른다
+function nextAvailableName(base, takenNames) {
+  if (!takenNames.has(base)) return base
+  let n = 1
+  while (takenNames.has(`${base}(${n})`)) n++
+  return `${base}(${n})`
+}
+
 function readSketchbook() {
   return JSON.parse(localStorage.getItem(SKETCHBOOK_KEY) || '[]')
 }
@@ -431,17 +439,19 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     })
   }, [pixels, tracingImage])
 
-  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 "이름_월일_시분"(예: 철수_1105_2023)을 만든다.
-  // 시각까지 넣어 같은 날 그린 다른 그림이 같은 기본 이름으로 서로 덮어쓰지 않게 하고,
-  // 한 작품 안에서는 이름이 바뀌지 않도록 처음 만든 이름을 기억해 둔다(전체 지우기 때 새로 만든다).
+  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 "이름_월일"(예: 철수_1105)을 만든다.
+  // 같은 날 그린 다른 그림이 이미 그 이름을 쓰고 있으면 철수_1105(1), 철수_1105(2)…처럼 번호를 붙여
+  // 서로 덮어쓰지 않게 한다. 한 작품 안에서는 이름이 바뀌지 않도록 처음 정한 이름을 기억해 둔다
+  // (전체 지우기 때 새로 정한다).
   const defaultFileNameRef = useRef(null)
   const buildDefaultFileName = useCallback(() => {
     if (resumeArtwork?.fileName) return resumeArtwork.fileName
     if (!defaultFileNameRef.current) {
       const now = new Date()
       const pad = (n) => String(n).padStart(2, '0')
-      defaultFileNameRef.current =
-        `${userName}_${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
+      const base = `${userName}_${pad(now.getMonth() + 1)}${pad(now.getDate())}`
+      const taken = new Set(readSketchbook().filter(it => it.id !== projectIdRef.current).map(it => it.fileName))
+      defaultFileNameRef.current = nextAvailableName(base, taken)
     }
     return defaultFileNameRef.current
   }, [resumeArtwork, userName])
@@ -449,9 +459,29 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   // 저장 창에는 지금 작품의 이름을 먼저 보여 준다 — 다른 이름으로 저장한 뒤 다시 열었을 때
   // 기본 이름이 떠서 다른 그림을 덮어쓰는 일이 없도록.
   const openSaveModal = useCallback(() => {
-    setSaveFileName(currentFileNameRef.current || buildDefaultFileName())
+    const initialName = currentFileNameRef.current || buildDefaultFileName()
+    setSaveFileName(initialName)
     setIsSaveModalOpen(true)
-  }, [buildDefaultFileName])
+
+    // 드라이브에 저장할 때: 아직 드라이브에 올린 적 없는 작품이 자동으로 정해진 기본 이름을 쓰고 있으면,
+    // 다른 기기에서 같은 날 저장한 그림과 이름이 겹치는지 드라이브에서도 확인해 번호를 이어 붙인다.
+    const isAutoName = initialName === defaultFileNameRef.current
+    const hasDriveFile = driveProjectRef.current === projectIdRef.current && driveIdRef.current
+    if (!driveMode || drive.status !== 'signedIn' || !isAutoName || hasDriveFile) return
+    listDriveArtworks().then(files => {
+      const taken = new Set([
+        ...readSketchbook().filter(it => it.id !== projectIdRef.current).map(it => it.fileName),
+        ...files.map(f => f.fileName),
+      ])
+      if (!taken.has(initialName)) return
+      const base = initialName.replace(/\(\d+\)$/, '')
+      const unique = nextAvailableName(base, taken)
+      defaultFileNameRef.current = unique
+      if (currentFileNameRef.current === initialName) currentFileNameRef.current = unique
+      // 그사이 학생이 이름을 직접 고쳤다면 건드리지 않는다
+      setSaveFileName(prev => (prev === initialName ? unique : prev))
+    }).catch(() => { /* 확인하지 못하면 이 기기 기준 이름 그대로 */ })
+  }, [buildDefaultFileName, driveMode, drive.status])
 
   // 스케치북 항목 하나의 공통 필드(제목/ID/시각 제외) — 자동 저장과 수동 저장이 함께 사용
   const buildSketchbookEntry = useCallback(() => ({
