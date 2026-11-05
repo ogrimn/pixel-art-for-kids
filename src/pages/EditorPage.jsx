@@ -10,6 +10,7 @@ import { decodeTracingBitmap, sampleContainColor } from '../utils/tracingBitmap'
 import { drawLoupe } from '../utils/loupe'
 import { PRESET_COLORS } from '../utils/palette'
 import { useDrive, saveArtworkToDrive } from '../utils/googleDrive'
+import { loadImageDataUrl, ImageValidationError } from '../utils/importArtwork'
 
 const MAX_HISTORY = 20
 export const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
@@ -133,6 +134,10 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   // 펜/지우개/채우기 등으로 실제 캔버스를 한 번이라도 변경했는지 — false인 동안은 아무 작업도
   // 안 한 빈 캔버스이므로 스케치북에 저장하지 않는다(handleCommit에서만 true로 전환).
   const [isDirty, setIsDirty] = useState(false)
+  // 스케치북에서 "이 기기 작품 모두 지우기"를 실행한 뒤에는 이미 예약된 자동 저장이나
+  // 편집기 언마운트 저장이 방금 지운 현재 작품을 되살리지 못하게 한다.
+  const discardLocalPersistenceRef = useRef(false)
+  const autosaveTimerRef = useRef(null)
   const toastTimer = useRef(null)
   const prevToolRef = useRef('pen')  // eyedrop 취소 시 이전 도구 복원용
   const sidebarTracingInputRef = useRef(null)
@@ -236,24 +241,21 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   }, [])
 
   // 파일 입력(클릭)과 드래그 앤 드롭이 같은 검증·로드 로직을 공유하도록 분리
-  const processTracingFile = (file) => {
+  const processTracingFile = async (file) => {
     if (!file) return
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      alert('PNG, JPG 또는 WebP 파일만 업로드할 수 있어요!')
-      return
-    }
     // 도안이 깔리기 직전 상태(그림+밑그림)를 강제로 되돌리기 지점에 밀어 넣는다 —
     // 도안이 적용되는 즉시 [되돌리기]가 활성화되고, 누르면 도안이 들어오기 전으로 깨끗이 복원된다.
     const beforePixels = pixels.map(r => [...r])
     const beforeTracingImage = tracingImage
-    const reader = new FileReader()
-    reader.onload = (ev) => {
+    try {
+      const dataUrl = await loadImageDataUrl(file)
       setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: beforePixels, tracingImage: beforeTracingImage }])
       setFuture([])
-      setTracingImage(ev.target.result)
+      setTracingImage(dataUrl)
       setTracingOffset({ x: 0, y: 0 }) // 새로 불러온 밑그림은 이전 이미지의 위치를 물려받지 않고 중앙에서 시작
+    } catch (error) {
+      alert(error instanceof ImageValidationError ? error.message : '이미지 파일을 열 수 없어요.')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleTracingUpload = (e) => {
@@ -403,6 +405,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   // 히스토리/미래 스택의 각 항목은 { pixels, tracingImage } 형태 — 그림뿐 아니라 밑그림
   // 유무도 함께 스냅샷해야, 도안을 불러온 뒤 되돌리기를 눌렀을 때 밑그림까지 깨끗이 사라진다.
   const handleCommit = useCallback((newPixels) => {
+    discardLocalPersistenceRef.current = false
     setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: pixels.map(r => [...r]), tracingImage }])
     setFuture([])
     setPixels(newPixels)
@@ -412,6 +415,8 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   const handleUndo = useCallback(() => {
     setHistory(prev => {
       if (!prev.length) return prev
+      discardLocalPersistenceRef.current = false
+      setIsDirty(true)
       const restored = prev[prev.length - 1]
       setFuture(f => [{ pixels: pixels.map(r => [...r]), tracingImage }, ...f])
       setPixels(restored.pixels)
@@ -423,6 +428,8 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   const handleRedo = useCallback(() => {
     setFuture(prev => {
       if (!prev.length) return prev
+      discardLocalPersistenceRef.current = false
+      setIsDirty(true)
       const restored = prev[0]
       setHistory(h => [...h.slice(-(MAX_HISTORY - 1)), { pixels: pixels.map(r => [...r]), tracingImage }])
       setPixels(restored.pixels)
@@ -468,7 +475,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   const persistCurrentSlot = useCallback((fileNameOverride) => {
     // 실제로 그린 적이 없는 빈 캔버스는 저장 자체를 건너뛴다 — 자동 저장, 전체 지우기 직전
     // 저장, 도안 만들기 진입 저장, 뒤로 가기 확정 저장이 모두 이 한 곳에서 함께 보호된다.
-    if (!isDirty) return null
+    if (discardLocalPersistenceRef.current || !isDirty) return null
     const all = JSON.parse(localStorage.getItem(SKETCHBOOK_KEY) || '[]')
     const idx = all.findIndex(it => it.id === projectIdRef.current)
     const now = new Date().toISOString()
@@ -614,12 +621,49 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       persistCurrentSlot()
       setSaveStatus('saved')
     }, 500)
-    return () => clearTimeout(timer)
+    autosaveTimerRef.current = timer
+    return () => {
+      clearTimeout(timer)
+      if (autosaveTimerRef.current === timer) autosaveTimerRef.current = null
+    }
   }, [pixels, persistCurrentSlot])
 
-  // 실시간 자동 저장이 이미 현재 작업을 최신 상태로 반영하고 있으므로
-  // 목록을 여는 것 외에 별도로 저장을 유발하지 않는다.
+  const handleClearLocalSketchbook = () => {
+    discardLocalPersistenceRef.current = true
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    // 이 시점의 캔버스를 새 변경으로 오인해 다시 예약하지 않도록 기준 참조도 맞춘다.
+    lastQueuedPixelsRef.current = pixels
+    setIsDirty(false)
+    setSaveStatus('idle')
+
+    // 지운 슬롯과 이후 편집을 분리한다. 사용자가 다시 그리면 새 슬롯으로 자동 저장되며,
+    // 아무것도 하지 않고 나가면 현재 그림은 언마운트 시에도 복원되지 않는다.
+    const nextProjectId = Date.now()
+    projectIdRef.current = nextProjectId
+    currentFileNameRef.current = null
+    defaultFileNameRef.current = null
+    driveProjectRef.current = nextProjectId
+    onProjectChange?.({ projectId: nextProjectId, cols: gridCols, rows: gridRows, artwork: null })
+  }
+
+  // 첫 편집 직후 500ms 안에 스케치북을 열면 아직 localStorage에는 작품이 없어 모달이
+  // 빈 목록으로 고정될 수 있다. 열기 전에 대기 중 타이머를 취소하고 동기 저장해 목록과
+  // "모두 지우기" 버튼이 첫 렌더부터 실제 상태와 일치하게 한다.
   const handleOpenSketchbook = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    try {
+      if (persistCurrentSlot()) setSaveStatus('saved')
+    } catch {
+      // localStorage 용량이 가득 찬 경우에도 삭제 화면은 열려야 사용자가 공간을 비울 수 있다.
+      setSaveStatus('idle')
+      showToast('저장 공간이 부족해요. 스케치북에서 필요 없는 그림을 지워 주세요.')
+    }
     setShowSketchbook(true)
   }
 
@@ -1003,7 +1047,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
               <input
                 ref={sidebarTracingInputRef}
                 type="file"
-                accept="image/*, image/webp"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={handleTracingUpload}
               />
@@ -1124,6 +1168,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
         <SketchbookModal
           userName={userName}
           onClose={() => setShowSketchbook(false)}
+          onClearLocal={handleClearLocalSketchbook}
           onEdit={(artwork) => {
             setShowSketchbook(false)
             onEditArtwork(artwork)
