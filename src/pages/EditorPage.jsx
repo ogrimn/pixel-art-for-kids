@@ -431,18 +431,25 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     })
   }, [pixels, tracingImage])
 
-  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 오늘 날짜 기반 이름을 생성
+  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 날짜+시각 기반 이름을 생성한다.
+  // 시각까지 넣어 같은 날 그린 다른 그림이 같은 기본 이름으로 서로 덮어쓰지 않게 하고,
+  // 한 작품 안에서는 이름이 바뀌지 않도록 처음 만든 이름을 기억해 둔다(전체 지우기 때 새로 만든다).
+  const defaultFileNameRef = useRef(null)
   const buildDefaultFileName = useCallback(() => {
     if (resumeArtwork?.fileName) return resumeArtwork.fileName
-    const today = new Date()
-    const y = today.getFullYear()
-    const m = String(today.getMonth() + 1).padStart(2, '0')
-    const d = String(today.getDate()).padStart(2, '0')
-    return `픽셀아트_${userName}_${y}${m}${d}`
+    if (!defaultFileNameRef.current) {
+      const now = new Date()
+      const pad = (n) => String(n).padStart(2, '0')
+      defaultFileNameRef.current =
+        `픽셀아트_${userName}_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
+    }
+    return defaultFileNameRef.current
   }, [resumeArtwork, userName])
 
+  // 저장 창에는 지금 작품의 이름을 먼저 보여 준다 — 다른 이름으로 저장한 뒤 다시 열었을 때
+  // 기본 이름이 떠서 다른 그림을 덮어쓰는 일이 없도록.
   const openSaveModal = useCallback(() => {
-    setSaveFileName(buildDefaultFileName())
+    setSaveFileName(currentFileNameRef.current || buildDefaultFileName())
     setIsSaveModalOpen(true)
   }, [buildDefaultFileName])
 
@@ -532,6 +539,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     const nextProjectId = Date.now()
     projectIdRef.current = nextProjectId
     currentFileNameRef.current = null
+    defaultFileNameRef.current = null
     onProjectChange?.({ projectId: nextProjectId, cols: gridCols, rows: gridRows, artwork: null })
 
     setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: pixels.map(r => [...r]), tracingImage }])
