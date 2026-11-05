@@ -133,19 +133,6 @@ async function loadUser() {
   setState({ status: 'signedIn', user: about.user })
 }
 
-// 새로고침 직후: 아직 유효한 토큰이 남아 있으면 팝업 없이 로그인 상태를 복원한다
-if (GOOGLE_CLIENT_ID) {
-  const saved = readStoredToken()
-  if (saved) {
-    token = saved
-    setState({ status: 'connecting' })
-    loadUser().catch(() => {
-      storeToken(null)
-      setState({ status: 'signedOut', user: null })
-    })
-  }
-}
-
 export class DriveAuthError extends Error {}
 export class DriveRequestError extends Error {
   constructor(status) {
@@ -219,6 +206,9 @@ export async function saveArtworkToDrive({ driveId, fileName, blob, cols, rows }
     mimeType: 'image/png',
     appProperties: { pixelArt: '1', cols: String(cols), rows: String(rows) },
   }
+  // 이 기기에서 연결된 드라이브 파일을 모르면, '픽셀아트' 폴더에서 같은 이름의 그림을 찾아 덮어쓴다
+  // (저장 창의 "같은 이름이면 덮어써요" 안내와 맞추고, 같은 이름의 파일이 여러 개 쌓이지 않게).
+  if (!driveId) driveId = await findDriveArtworkByName(metadata.name)
   if (driveId) {
     try {
       const request = multipartRequest(metadata, blob)
@@ -240,6 +230,15 @@ export async function saveArtworkToDrive({ driveId, fileName, blob, cols, rows }
     ...request,
   })
   return created.id
+}
+
+async function findDriveArtworkByName(name) {
+  const parent = await getFolderId()
+  const quoted = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+  const q = encodeURIComponent(
+    `'${parent}' in parents and trashed=false and name='${quoted}' and appProperties has { key='pixelArt' and value='1' }`)
+  const res = await driveJson(`${API}/files?q=${q}&orderBy=modifiedTime desc&pageSize=1&fields=files(id)`)
+  return res.files?.[0]?.id || null
 }
 
 export async function listDriveArtworks() {
@@ -269,4 +268,18 @@ export async function trashDriveArtwork(driveId) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ trashed: true }),
   })
+}
+
+// 새로고침 직후: 아직 유효한 토큰이 남아 있으면 팝업 없이 로그인 상태를 복원한다.
+// 파일 맨 끝에 둬야 한다 — 위에 있으면 아직 선언되지 않은 driveJson을 불러 복원이 늘 실패한다.
+if (GOOGLE_CLIENT_ID) {
+  const saved = readStoredToken()
+  if (saved) {
+    token = saved
+    setState({ status: 'connecting' })
+    loadUser().catch(() => {
+      storeToken(null)
+      setState({ status: 'signedOut', user: null })
+    })
+  }
 }

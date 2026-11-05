@@ -68,7 +68,7 @@ export default function DriveButton({ onError }) {
     ? '구글 드라이브 연결됨'
     : drive.status === 'expired'
       ? '구글 드라이브 다시 연결'
-      : '구글 드라이브에 저장하기'
+      : '구글 로그인'
   const showTooltip = () => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
@@ -113,7 +113,7 @@ export default function DriveButton({ onError }) {
           ref={buttonRef}
           onClick={() => { hideTooltip(); setShowConnect(true) }}
           disabled={drive.status === 'connecting'}
-          aria-label="구글 드라이브에 저장하기"
+          aria-label="구글 로그인"
           onMouseEnter={showTooltip}
           onMouseLeave={hideTooltip}
           className={`${roundBtn} text-white disabled:opacity-40`}
@@ -139,14 +139,13 @@ export default function DriveButton({ onError }) {
             <CloudIcon className="w-10 h-10 mx-auto text-white" />
             <p className="font-pixel font-bold text-base text-white">구글 드라이브에 저장할까요?</p>
             <p className="font-code text-[14px] text-gray-400 leading-relaxed break-keep">
-              로그인하면 그림이 내 구글 드라이브의 <span className="text-white">'픽셀아트'</span> 폴더에
-              자동으로 저장돼요. 다른 기기에서도 스케치북에서 이어 그릴 수 있어요.
+              로그인하면 저장 버튼을 눌렀을 때<br />
+              내 구글 드라이브의 <span className="text-white">'픽셀아트'</span> 폴더에 저장돼요.<br />
+              다른 기기 스케치북에서 이어 그릴 수 있어요.
             </p>
             <p className="font-code text-[13px] leading-relaxed break-keep" style={{ color: ACCENT_YELLOW }}>
-              학생은 학교에서 허락한 경우에만 로그인해요.
-            </p>
-            <p className="font-code text-[12px] text-gray-500 leading-relaxed break-keep">
-              이 앱은 자기가 만든 그림 파일만 볼 수 있고, 드라이브의 다른 파일은 볼 수 없어요.
+              이 앱은 자기가 만든 그림 파일만 볼 수 있고,<br />
+              드라이브의 다른 파일은 볼 수 없어요.
             </p>
           </div>
           <div className="flex gap-3 w-full">
@@ -176,7 +175,7 @@ export default function DriveButton({ onError }) {
             <p className="font-code text-[14px] text-gray-300">{drive.user?.displayName}</p>
             <p className="font-code text-[13px] text-gray-500">{drive.user?.emailAddress}</p>
             <p className="font-code text-[13px] text-gray-400 leading-relaxed break-keep mt-2">
-              그림을 고치면 드라이브의 '픽셀아트' 폴더에 자동으로 저장돼요.
+              저장 버튼을 누르면 드라이브의 '픽셀아트' 폴더에 저장돼요.
               다른 사람이 쓸 기기라면 다 쓴 뒤 꼭 로그아웃해 주세요.
             </p>
           </div>
