@@ -12,7 +12,7 @@ import { PRESET_COLORS } from '../utils/palette'
 import { useDrive, saveArtworkToDrive } from '../utils/googleDrive'
 
 const MAX_HISTORY = 20
-const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
+export const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
 const ACCENT_YELLOW = '#f7d070'
 const DANGER = '#f87171'
 const PAGE_BG = '#1a1c1e'
@@ -107,7 +107,7 @@ function HeaderBtn({ onClick, disabled, children, title, variant = 'ghost', icon
   )
 }
 
-export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork, onGoToSetup, onEditArtwork }) {
+export default function EditorPage({ userName, gridCols, gridRows, projectId, resumeArtwork, onGoToSetup, onEditArtwork }) {
   const [pixels, setPixels] = useState(() => (
     resumeArtwork?.pixels ? resumeArtwork.pixels.map(row => [...row]) : makeEmpty(gridRows, gridCols)
   ))
@@ -202,7 +202,7 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
 
   // 자동 저장이 덮어쓸 스케치북 항목의 고유 ID. 불러온 작품이면 그 ID를 그대로 이어받고,
   // 새로 시작한 캔버스면 이 세션 동안 고정되는 새 ID를 발급해 매번 새 항목이 쌓이지 않게 한다.
-  const projectIdRef = useRef(resumeArtwork?.id ?? Date.now())
+  const projectIdRef = useRef(resumeArtwork?.id ?? projectId ?? Date.now())
   const currentFileNameRef = useRef(resumeArtwork?.fileName || null)
   // 마지막으로 저장을 예약한 pixels 참조 — 최초값과 동일하면(StrictMode의 개발 모드 이펙트
   // 이중 실행 포함) 실제 편집이 아니므로 자동 저장을 건너뛴다.

@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import EntryPage from './pages/EntryPage'
 import SetupPage from './pages/SetupPage'
-import EditorPage from './pages/EditorPage'
+import EditorPage, { SKETCHBOOK_KEY } from './pages/EditorPage'
 
 const HISTORY_PAGE_KEY = 'pixelArtPage'
 const APP_PAGES = new Set(['entry', 'setup', 'editor'])
@@ -11,6 +11,10 @@ export default function App() {
   const [userName, setUserName] = useState('')
   const [canvasConfig, setCanvasConfig] = useState({ cols: 16, rows: 16 })
   const [resumeArtwork, setResumeArtwork] = useState(null)
+  const [editorProjectId, setEditorProjectId] = useState(null)
+  // 아직 수정하지 않은 파일 불러오기 작품은 localStorage에 없을 수 있으므로, 현재 탭의
+  // 뒤로/앞으로 이동 동안에는 최초 작품 데이터도 프로젝트 ID별로 보관한다.
+  const editorInitialArtworkRef = useRef(new Map())
   // 새로 시작하거나 스케치북에서 다른 작품을 불러올 때마다 값을 바꿔 EditorPage를 완전히 새로 마운트시킨다
   const [editorKey, setEditorKey] = useState(0)
 
@@ -41,15 +45,35 @@ export default function App() {
     )
     const handlePopState = (event) => {
       const historyPage = event.state?.[HISTORY_PAGE_KEY]
-      if (APP_PAGES.has(historyPage)) setPage(historyPage)
+      if (!APP_PAGES.has(historyPage)) return
+      if (historyPage === 'editor') {
+        const projectId = event.state?.editorProjectId
+        const cols = Number(event.state?.editorCols)
+        const rows = Number(event.state?.editorRows)
+        let savedArtwork = null
+        try {
+          const saved = JSON.parse(localStorage.getItem(SKETCHBOOK_KEY) || '[]')
+          savedArtwork = saved.find(item => item.id === projectId) || null
+        } catch { /* 저장소를 읽지 못하면 탭 안의 최초 데이터로 복원 */ }
+        const artwork = savedArtwork || editorInitialArtworkRef.current.get(projectId) || null
+        if (Number.isFinite(cols) && Number.isFinite(rows)) setCanvasConfig({ cols, rows })
+        setEditorProjectId(projectId ?? null)
+        setResumeArtwork(artwork)
+        setEditorKey(key => key + 1)
+      }
+      setPage(historyPage)
     }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const navigate = (newPage, { replace = false } = {}) => {
+  const navigate = (newPage, { replace = false, historyState = {} } = {}) => {
     if (!APP_PAGES.has(newPage)) return
-    const nextState = { ...(window.history.state || {}), [HISTORY_PAGE_KEY]: newPage }
+    const nextState = {
+      ...(window.history.state || {}),
+      ...historyState,
+      [HISTORY_PAGE_KEY]: newPage,
+    }
     window.history[replace ? 'replaceState' : 'pushState'](nextState, '', window.location.href)
     setPage(newPage)
   }
@@ -58,6 +82,7 @@ export default function App() {
     setUserName('')
     setCanvasConfig({ cols: 16, rows: 16 })
     setResumeArtwork(null)
+    setEditorProjectId(null)
     navigate('entry')
   }
 
@@ -74,17 +99,36 @@ export default function App() {
       {page === 'setup' && (
         <SetupPage
           onNext={(cfg) => {
+            const projectId = Date.now()
             setCanvasConfig(cfg)
             setResumeArtwork(null)
+            setEditorProjectId(projectId)
+            editorInitialArtworkRef.current.delete(projectId)
             setEditorKey(k => k + 1)
-            navigate('editor')
+            navigate('editor', {
+              historyState: {
+                editorProjectId: projectId,
+                editorCols: cfg.cols,
+                editorRows: cfg.rows,
+              },
+            })
           }}
           onImport={(artwork) => {
             // 파일에서 불러온 그림은 그 칸 수 그대로 캔버스를 열고, 스케치북에는 새 작품으로 쌓인다
+            const projectId = artwork.id ?? Date.now()
+            const initialArtwork = { ...artwork, id: projectId, imported: true }
             setCanvasConfig({ cols: artwork.cols, rows: artwork.rows })
-            setResumeArtwork({ ...artwork, id: Date.now(), imported: true })
+            setResumeArtwork(initialArtwork)
+            setEditorProjectId(projectId)
+            editorInitialArtworkRef.current.set(projectId, initialArtwork)
             setEditorKey(k => k + 1)
-            navigate('editor')
+            navigate('editor', {
+              historyState: {
+                editorProjectId: projectId,
+                editorCols: artwork.cols,
+                editorRows: artwork.rows,
+              },
+            })
           }}
           onGoHome={resetToEntry}
         />
@@ -95,11 +139,23 @@ export default function App() {
           userName={userName}
           gridCols={canvasConfig.cols}
           gridRows={canvasConfig.rows}
+          projectId={editorProjectId}
           resumeArtwork={resumeArtwork}
           onGoToSetup={() => navigate('setup')}
           onEditArtwork={(artwork) => {
-            setCanvasConfig({ cols: artwork.cols, rows: artwork.rows })
-            setResumeArtwork(artwork)
+            const projectId = artwork.id ?? Date.now()
+            const nextArtwork = { ...artwork, id: projectId }
+            setCanvasConfig({ cols: nextArtwork.cols, rows: nextArtwork.rows })
+            setResumeArtwork(nextArtwork)
+            setEditorProjectId(projectId)
+            editorInitialArtworkRef.current.set(projectId, nextArtwork)
+            window.history.replaceState({
+              ...(window.history.state || {}),
+              editorProjectId: projectId,
+              editorCols: nextArtwork.cols,
+              editorRows: nextArtwork.rows,
+              [HISTORY_PAGE_KEY]: 'editor',
+            }, '', window.location.href)
             setEditorKey(k => k + 1)
           }}
         />
