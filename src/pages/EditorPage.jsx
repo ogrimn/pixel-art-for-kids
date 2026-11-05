@@ -649,9 +649,15 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     onProjectChange?.({ projectId: nextProjectId, cols: gridCols, rows: gridRows, artwork: null })
   }
 
-  // 실시간 자동 저장이 이미 현재 작업을 최신 상태로 반영하고 있으므로
-  // 목록을 여는 것 외에 별도로 저장을 유발하지 않는다.
+  // 첫 편집 직후 500ms 안에 스케치북을 열면 아직 localStorage에는 작품이 없어 모달이
+  // 빈 목록으로 고정될 수 있다. 열기 전에 대기 중 타이머를 취소하고 동기 저장해 목록과
+  // "모두 지우기" 버튼이 첫 렌더부터 실제 상태와 일치하게 한다.
   const handleOpenSketchbook = () => {
+    if (autosaveTimerRef.current) {
+      clearTimeout(autosaveTimerRef.current)
+      autosaveTimerRef.current = null
+    }
+    if (persistCurrentSlot()) setSaveStatus('saved')
     setShowSketchbook(true)
   }
 
