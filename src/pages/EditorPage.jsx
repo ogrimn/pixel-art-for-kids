@@ -107,7 +107,7 @@ function HeaderBtn({ onClick, disabled, children, title, variant = 'ghost', icon
   )
 }
 
-export default function EditorPage({ userName, gridCols, gridRows, projectId, resumeArtwork, onGoToSetup, onEditArtwork }) {
+export default function EditorPage({ userName, gridCols, gridRows, projectId, resumeArtwork, onGoToSetup, onEditArtwork, onProjectChange }) {
   const [pixels, setPixels] = useState(() => (
     resumeArtwork?.pixels ? resumeArtwork.pixels.map(row => [...row]) : makeEmpty(gridRows, gridCols)
   ))
@@ -547,8 +547,10 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     flushDriveSync()
     setSaveStatus('saved')
     // 지금까지의 작업은 안전하게 보존했으니, 이제부터의 자동 저장은 새 캔버스를 대상으로 하도록 새 프로젝트 ID 발급
-    projectIdRef.current = Date.now()
+    const nextProjectId = Date.now()
+    projectIdRef.current = nextProjectId
     currentFileNameRef.current = null
+    onProjectChange?.({ projectId: nextProjectId, cols: gridCols, rows: gridRows, artwork: null })
 
     setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: pixels.map(r => [...r]), tracingImage }])
     setFuture([])
@@ -593,11 +595,12 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     flushDriveSync()
     projectIdRef.current = entryId
     currentFileNameRef.current = name
+    onProjectChange?.({ projectId: entryId, cols: gridCols, rows: gridRows, artwork: entry })
     setSaveStatus('saved')
     syncToDrive()
 
     setIsSaveModalOpen(false)
-  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, flushDriveSync, syncToDrive])
+  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, flushDriveSync, syncToDrive, onProjectChange, gridCols, gridRows])
 
   // 실시간 자동 저장: 그림이 바뀔 때마다 500ms 디바운스 후 localStorage 스케치북을
   // 현재 프로젝트 ID로 덮어쓴다. pixels 참조가 마지막 예약 시점과 같으면(최초 마운트,

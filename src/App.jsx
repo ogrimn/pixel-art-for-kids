@@ -39,13 +39,14 @@ export default function App() {
   // 문서의 첫 기록은 항상 시작 화면으로 초기화한다.
   useEffect(() => {
     window.history.replaceState(
-      { ...(window.history.state || {}), [HISTORY_PAGE_KEY]: 'entry' },
+      { ...(window.history.state || {}), userName: '', [HISTORY_PAGE_KEY]: 'entry' },
       '',
       window.location.href,
     )
     const handlePopState = (event) => {
       const historyPage = event.state?.[HISTORY_PAGE_KEY]
       if (!APP_PAGES.has(historyPage)) return
+      if (typeof event.state?.userName === 'string') setUserName(event.state.userName)
       if (historyPage === 'editor') {
         const projectId = event.state?.editorProjectId
         const cols = Number(event.state?.editorCols)
@@ -83,7 +84,25 @@ export default function App() {
     setCanvasConfig({ cols: 16, rows: 16 })
     setResumeArtwork(null)
     setEditorProjectId(null)
-    navigate('entry')
+    navigate('entry', { historyState: { userName: '' } })
+  }
+
+  // 편집기 안에서 전체 지우기로 새 슬롯을 만들거나 PNG를 다른 이름으로 저장하면
+  // EditorPage의 현재 프로젝트 ID가 바뀐다. 현재 브라우저 기록도 즉시 같은 ID로
+  // 맞춰야 뒤로 갔다 앞으로 왔을 때 방금 만든 슬롯을 정확히 복원할 수 있다.
+  const syncEditorHistory = ({ projectId, cols, rows, artwork = null }) => {
+    setEditorProjectId(projectId)
+    setResumeArtwork(artwork)
+    if (artwork) editorInitialArtworkRef.current.set(projectId, artwork)
+    else editorInitialArtworkRef.current.delete(projectId)
+    window.history.replaceState({
+      ...(window.history.state || {}),
+      userName,
+      editorProjectId: projectId,
+      editorCols: cols,
+      editorRows: rows,
+      [HISTORY_PAGE_KEY]: 'editor',
+    }, '', window.location.href)
   }
 
   return (
@@ -92,7 +111,7 @@ export default function App() {
         <EntryPage
           onNext={(name) => {
             setUserName(name)
-            navigate('setup')
+            navigate('setup', { historyState: { userName: name } })
           }}
         />
       )}
@@ -110,6 +129,7 @@ export default function App() {
                 editorProjectId: projectId,
                 editorCols: cfg.cols,
                 editorRows: cfg.rows,
+                userName,
               },
             })
           }}
@@ -127,6 +147,7 @@ export default function App() {
                 editorProjectId: projectId,
                 editorCols: artwork.cols,
                 editorRows: artwork.rows,
+                userName,
               },
             })
           }}
@@ -142,20 +163,17 @@ export default function App() {
           projectId={editorProjectId}
           resumeArtwork={resumeArtwork}
           onGoToSetup={() => navigate('setup')}
+          onProjectChange={syncEditorHistory}
           onEditArtwork={(artwork) => {
             const projectId = artwork.id ?? Date.now()
             const nextArtwork = { ...artwork, id: projectId }
             setCanvasConfig({ cols: nextArtwork.cols, rows: nextArtwork.rows })
-            setResumeArtwork(nextArtwork)
-            setEditorProjectId(projectId)
-            editorInitialArtworkRef.current.set(projectId, nextArtwork)
-            window.history.replaceState({
-              ...(window.history.state || {}),
-              editorProjectId: projectId,
-              editorCols: nextArtwork.cols,
-              editorRows: nextArtwork.rows,
-              [HISTORY_PAGE_KEY]: 'editor',
-            }, '', window.location.href)
+            syncEditorHistory({
+              projectId,
+              cols: nextArtwork.cols,
+              rows: nextArtwork.rows,
+              artwork: nextArtwork,
+            })
             setEditorKey(k => k + 1)
           }}
         />
