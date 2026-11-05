@@ -10,6 +10,7 @@ import { decodeTracingBitmap, sampleContainColor } from '../utils/tracingBitmap'
 import { drawLoupe } from '../utils/loupe'
 import { PRESET_COLORS } from '../utils/palette'
 import { useDrive, saveArtworkToDrive } from '../utils/googleDrive'
+import { loadImageDataUrl, ImageValidationError } from '../utils/importArtwork'
 
 const MAX_HISTORY = 20
 export const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
@@ -236,24 +237,21 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
   }, [])
 
   // 파일 입력(클릭)과 드래그 앤 드롭이 같은 검증·로드 로직을 공유하도록 분리
-  const processTracingFile = (file) => {
+  const processTracingFile = async (file) => {
     if (!file) return
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
-      alert('PNG, JPG 또는 WebP 파일만 업로드할 수 있어요!')
-      return
-    }
     // 도안이 깔리기 직전 상태(그림+밑그림)를 강제로 되돌리기 지점에 밀어 넣는다 —
     // 도안이 적용되는 즉시 [되돌리기]가 활성화되고, 누르면 도안이 들어오기 전으로 깨끗이 복원된다.
     const beforePixels = pixels.map(r => [...r])
     const beforeTracingImage = tracingImage
-    const reader = new FileReader()
-    reader.onload = (ev) => {
+    try {
+      const dataUrl = await loadImageDataUrl(file)
       setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: beforePixels, tracingImage: beforeTracingImage }])
       setFuture([])
-      setTracingImage(ev.target.result)
+      setTracingImage(dataUrl)
       setTracingOffset({ x: 0, y: 0 }) // 새로 불러온 밑그림은 이전 이미지의 위치를 물려받지 않고 중앙에서 시작
+    } catch (error) {
+      alert(error instanceof ImageValidationError ? error.message : '이미지 파일을 열 수 없어요.')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleTracingUpload = (e) => {
@@ -1003,7 +1001,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
               <input
                 ref={sidebarTracingInputRef}
                 type="file"
-                accept="image/*, image/webp"
+                accept="image/png,image/jpeg,image/webp"
                 className="hidden"
                 onChange={handleTracingUpload}
               />

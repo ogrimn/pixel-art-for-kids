@@ -299,6 +299,13 @@ export default function SketchbookModal({ userName, onClose, onEdit }) {
     setItems(prev => prev.filter(i => i.id !== id))
   }
 
+  const handleClearLocal = () => {
+    if (!window.confirm(`이 기기에 저장된 '${userName}'의 작품을 모두 지울까요? 이 작업은 되돌릴 수 없어요.`)) return
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(all.filter(item => item.userName !== userName)))
+    setItems([])
+  }
+
   const handleEdit = (item) => {
     onEdit({
       id: item.id,
@@ -327,12 +334,22 @@ export default function SketchbookModal({ userName, onClose, onEdit }) {
               {count}개의 작품 · 클릭해서 이어 그리기
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-colors"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            {tab === 'local' && items.length > 0 && (
+              <button
+                onClick={handleClearLocal}
+                className="font-code rounded-lg px-2.5 py-1.5 text-[11px] text-red-500 transition-colors hover:bg-red-50"
+              >
+                이 기기 작품 모두 지우기
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {driveEnabled && (

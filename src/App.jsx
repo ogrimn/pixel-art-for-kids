@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import EntryPage from './pages/EntryPage'
 import SetupPage from './pages/SetupPage'
 import EditorPage, { SKETCHBOOK_KEY } from './pages/EditorPage'
+import { signOut } from './utils/googleDrive'
 
 const HISTORY_PAGE_KEY = 'pixelArtPage'
 const APP_PAGES = new Set(['entry', 'setup', 'editor'])
@@ -80,6 +81,9 @@ export default function App() {
   }
 
   const resetToEntry = () => {
+    // 공용 기기에서 다음 사용자가 이전 사용자의 Drive 파일을 보지 못하도록, 완전히
+    // 처음 화면으로 나갈 때는 Google 토큰도 함께 폐기한다.
+    signOut()
     setUserName('')
     setCanvasConfig({ cols: 16, rows: 16 })
     setResumeArtwork(null)
