@@ -6,6 +6,14 @@ export const BASE_GRIDS = {
   a4:     [{ cols: 20, rows: 28 }, { cols: 30, rows: 42 }, { cols: 45, rows: 63 }],
 }
 
+// 방향 선택 기능이 생기기 전 사용하던 크기. 설정 화면에는 더 이상 노출하지 않지만,
+// 예전에 저장한 PNG를 원래 칸 수로 복원할 수 있도록 불러오기 후보에는 유지한다.
+const LEGACY_GRIDS = [16, 24, 32, 64].flatMap(res => [
+  { cols: res, rows: res },
+  { cols: Math.round(res * 9 / 16), rows: res },
+  { cols: res, rows: Math.round(res * Math.SQRT2) },
+])
+
 // 설정 화면에서 고를 수 있는 모든 캔버스 크기(가로/세로 방향 모두, 중복 제거) —
 // 불러온 그림이 몇 칸짜리였는지 추정할 때 후보 목록으로 쓴다.
 export const ALL_GRIDS = (() => {
@@ -18,6 +26,12 @@ export const ALL_GRIDS = (() => {
       seen.add(key)
       list.push({ cols, rows })
     }
+  }
+  for (const { cols, rows } of LEGACY_GRIDS) {
+    const key = `${cols}x${rows}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    list.push({ cols, rows })
   }
   return list
 })()

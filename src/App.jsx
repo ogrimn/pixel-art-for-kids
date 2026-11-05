@@ -3,6 +3,9 @@ import EntryPage from './pages/EntryPage'
 import SetupPage from './pages/SetupPage'
 import EditorPage from './pages/EditorPage'
 
+const HISTORY_PAGE_KEY = 'pixelArtPage'
+const APP_PAGES = new Set(['entry', 'setup', 'editor'])
+
 export default function App() {
   const [page, setPage] = useState('entry')
   const [userName, setUserName] = useState('')
@@ -27,7 +30,29 @@ export default function App() {
     }
   }, [])
 
-  const navigate = (newPage) => setPage(newPage)
+  // 각 앱 화면을 브라우저 기록에 남겨 휴대폰·브라우저 뒤로 가기가 앱 안에서 먼저
+  // 동작하게 한다. 새로고침했을 때 편집 상태가 일부만 복원되는 것을 막기 위해 현재
+  // 문서의 첫 기록은 항상 시작 화면으로 초기화한다.
+  useEffect(() => {
+    window.history.replaceState(
+      { ...(window.history.state || {}), [HISTORY_PAGE_KEY]: 'entry' },
+      '',
+      window.location.href,
+    )
+    const handlePopState = (event) => {
+      const historyPage = event.state?.[HISTORY_PAGE_KEY]
+      if (APP_PAGES.has(historyPage)) setPage(historyPage)
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const navigate = (newPage, { replace = false } = {}) => {
+    if (!APP_PAGES.has(newPage)) return
+    const nextState = { ...(window.history.state || {}), [HISTORY_PAGE_KEY]: newPage }
+    window.history[replace ? 'replaceState' : 'pushState'](nextState, '', window.location.href)
+    setPage(newPage)
+  }
 
   const resetToEntry = () => {
     setUserName('')

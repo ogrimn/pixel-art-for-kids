@@ -168,10 +168,10 @@ function DriveTab({ onEdit, onCountChange }) {
       >
         <button
           onClick={() => signIn().catch(() => {})}
-          disabled={drive.status === 'connecting'}
+          disabled={!drive.gisReady || drive.status === 'connecting'}
           className="font-pixel rounded-full px-6 py-3 text-sm text-black bg-[#f7d070] hover:brightness-105 disabled:opacity-50"
         >
-          {drive.status === 'connecting' ? '연결 중...' : expired ? '다시 연결' : '구글로 로그인'}
+          {!drive.gisReady ? '로그인 준비 중...' : drive.status === 'connecting' ? '연결 중...' : expired ? '다시 연결' : '구글로 로그인'}
         </button>
       </EmptyState>
     )
