@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 const ACCENT_YELLOW = '#f7d070'
@@ -10,6 +10,8 @@ const PANEL_BG = '#111214'
 export default function QrInvite() {
   const [open, setOpen] = useState(false)
   const [qrSrc, setQrSrc] = useState(null)
+  const triggerRef = useRef(null)
+  const closeRef = useRef(null)
   const url = `${window.location.origin}/`
 
   useEffect(() => {
@@ -25,12 +27,23 @@ export default function QrInvite() {
     if (!open) return
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    // QR 창이 떠 있는 동안 뒤쪽 앱 화면(#root)은 키보드·클릭 모두 막는다 — Tab으로 가려진
+    // 이름 입력칸이나 ENTER에 닿지 않도록. 포커스는 창 안의 닫기 버튼으로, 닫으면 원래 버튼으로.
+    const root = document.getElementById('root')
+    if (root) root.inert = true
+    closeRef.current?.focus()
+    const trigger = triggerRef.current
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (root) root.inert = false
+      trigger?.focus()
+    }
   }, [open])
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         className="font-code absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all hover:brightness-125 active:scale-[0.97]"
@@ -50,8 +63,14 @@ export default function QrInvite() {
           onClick={e => e.target === e.currentTarget && setOpen(false)}
         >
           {/* m-auto: 화면보다 길어져도 위쪽이 잘리지 않고 스크롤되도록(가운데 정렬은 여백으로) */}
-          <div className="m-auto flex w-full max-w-xl flex-col items-center gap-5 rounded-2xl px-6 py-7" style={{ background: PANEL_BG }}>
-            <p className="font-code text-center text-2xl text-white sm:text-3xl">휴대폰 카메라로 찍어서 들어와요!</p>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="qr-invite-title"
+            className="m-auto flex w-full max-w-xl flex-col items-center gap-5 rounded-2xl px-6 py-7"
+            style={{ background: PANEL_BG }}
+          >
+            <p id="qr-invite-title" className="font-code text-center text-2xl text-white sm:text-3xl">휴대폰 카메라로 찍어서 들어와요!</p>
             <div className="w-full rounded-2xl bg-white p-3" style={{ maxWidth: 'min(60vh, 520px)' }}>
               {qrSrc ? (
                 <img src={qrSrc} alt={`${url} 접속 QR 코드`} className="block aspect-square w-full" style={{ imageRendering: 'pixelated' }} />
@@ -61,6 +80,7 @@ export default function QrInvite() {
             </div>
             <p className="font-code break-all text-center text-lg text-gray-300 sm:text-xl">{url}</p>
             <button
+              ref={closeRef}
               type="button"
               onClick={() => setOpen(false)}
               className="font-code rounded-full px-10 py-3 text-base text-black transition-all hover:brightness-105 active:scale-[0.97]"
