@@ -1241,7 +1241,8 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
             onClick={e => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2">
-              <p className="font-pixel text-base text-white">그림 저장(PNG)</p>
+              {/* font-pixel은 영문만 Press Start 2P로 바꿔 'PNG'가 크고 다른 모양으로 보여서, 한글 픽셀 폰트 하나로 통일 */}
+              <p className="font-pixel-kr text-base text-white">그림 저장(PNG)</p>
               <p className="text-sm text-gray-400 leading-relaxed">
                 저장할 파일 이름을 입력해주세요.
               </p>
