@@ -587,7 +587,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       showToast(`'${name}'에 덮어썼어요!`)
     } else {
       all.unshift({ createdAt: now, ...entry })
-      showToast('PNG로 저장했어요!')
+      showToast('그림을 저장했어요!')
     }
     localStorage.setItem(SKETCHBOOK_KEY, JSON.stringify(all.slice(0, 50)))
 
@@ -750,8 +750,8 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
             <HeaderBtn onClick={handleCopyImage} title="그림 복사하기">
               <img src={copyIcon} alt="그림 복사하기" className="w-5 h-5 invert" />
             </HeaderBtn>
-            <HeaderBtn onClick={openSaveModal} title="PNG 저장">
-              <img src="/images/downloads.png" alt="PNG 저장" className="w-5 h-5 invert" />
+            <HeaderBtn onClick={openSaveModal} title="그림 저장(PNG)">
+              <img src="/images/downloads.png" alt="그림 저장(PNG)" className="w-5 h-5 invert" />
             </HeaderBtn>
             <div className="w-px h-5 mx-1 shrink-0" style={{ background: 'rgba(255,255,255,0.1)' }} />
             <HeaderBtn onClick={handleToggleFullscreen} title={isFullscreen ? '전체화면 종료' : '전체화면'}>
@@ -1241,7 +1241,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
             onClick={e => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2">
-              <p className="font-pixel text-base text-white">이미지로 저장</p>
+              <p className="font-pixel text-base text-white">그림 저장(PNG)</p>
               <p className="text-sm text-gray-400 leading-relaxed">
                 저장할 파일 이름을 입력해주세요.
               </p>

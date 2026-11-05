@@ -132,7 +132,7 @@ export default function HelpModal({ onClose }) {
                 그림을 복사해서 우리 반 게시판에 바로 붙여넣기 해요.
               </Row>
 
-              <Row icon={<Icon src="/images/downloads.png" alt="PNG 저장" />}>
+              <Row icon={<Icon src="/images/downloads.png" alt="그림 저장(PNG)" />}>
                 완성한 도트 그림을 이미지 파일(PNG)로 저장해요.
               </Row>
             </div>
