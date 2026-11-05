@@ -278,7 +278,7 @@ function DriveTab({ onEdit, onCountChange }) {
   )
 }
 
-export default function SketchbookModal({ userName, onClose, onEdit }) {
+export default function SketchbookModal({ userName, onClose, onEdit, onClearLocal }) {
   const drive = useDrive()
   const driveEnabled = drive.status !== 'disabled'
   // 로그인한 상태라면 드라이브 탭부터 — 새 기기에서는 이 기기 스케치북이 비어 있기 마련이라
@@ -301,6 +301,9 @@ export default function SketchbookModal({ userName, onClose, onEdit }) {
 
   const handleClearLocal = () => {
     if (!window.confirm(`이 기기에 저장된 '${userName}'의 작품을 모두 지울까요? 이 작업은 되돌릴 수 없어요.`)) return
+    // 편집기에는 별도의 디바운스 자동 저장과 언마운트 저장이 있다. 저장소를 먼저
+    // 비우기만 하면 그 작업들이 현재 그림을 곧바로 다시 만들 수 있으므로 먼저 폐기 신호를 보낸다.
+    onClearLocal?.()
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all.filter(item => item.userName !== userName)))
     setItems([])
