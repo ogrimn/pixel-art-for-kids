@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import QrInvite from '../components/QrInvite'
 
 const ACCENT_YELLOW = '#f7d070'
 const TITLE_BLUE = '#dceeff'
@@ -45,6 +46,7 @@ export default function EntryPage({ onNext }) {
 
   return (
     <div className="entry-page relative h-svh w-screen overflow-y-auto" style={{ background: PAGE_BG }}>
+      <QrInvite />
 
       {/* 오늘의 그림과 어울리는 은은한 청회색 광원 */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
