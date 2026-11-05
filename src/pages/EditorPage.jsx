@@ -431,7 +431,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
     })
   }, [pixels, tracingImage])
 
-  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 날짜+시각 기반 이름을 생성한다.
+  // 불러온 작품이 있으면 그 파일명을 기본값으로, 없으면 "이름_월일_시분"(예: 철수_1105_2023)을 만든다.
   // 시각까지 넣어 같은 날 그린 다른 그림이 같은 기본 이름으로 서로 덮어쓰지 않게 하고,
   // 한 작품 안에서는 이름이 바뀌지 않도록 처음 만든 이름을 기억해 둔다(전체 지우기 때 새로 만든다).
   const defaultFileNameRef = useRef(null)
@@ -441,7 +441,7 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       const now = new Date()
       const pad = (n) => String(n).padStart(2, '0')
       defaultFileNameRef.current =
-        `픽셀아트_${userName}_${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
+        `${userName}_${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`
     }
     return defaultFileNameRef.current
   }, [resumeArtwork, userName])

@@ -305,7 +305,7 @@ export default function SketchbookModal({ userName, onClose, onEdit }) {
       pixels: item.pixels,
       cols: item.cols,
       rows: item.rows,
-      fileName: item.fileName || `픽셀아트_${userName}_${item.id}`,
+      fileName: item.fileName || `${userName}_${item.id}`,
       driveId: item.driveId,
     })
   }
@@ -369,7 +369,7 @@ export default function SketchbookModal({ userName, onClose, onEdit }) {
                   title={item.fileName || `${item.cols}×${item.rows}칸`}
                   subtitle={`${formatDate(item.updatedAt || item.createdAt)} · ${item.cols}×${item.rows}칸`}
                   onEdit={() => handleEdit(item)}
-                  onDownload={() => downloadUrl(item.dataUrl, `픽셀아트_${userName}_${item.id}.png`)}
+                  onDownload={() => downloadUrl(item.dataUrl, `${item.fileName || `${userName}_${item.id}`}.png`)}
                   onDelete={() => handleDelete(item.id)}
                 />
               ))}
