@@ -12,26 +12,114 @@ const ASPECT_TOL = 0.03      // 이미지 가로세로 비율과 격자 비율�
 const MIN_CELL_PX = 4        // 한 칸이 이보다 작으면 너무 줄어든 이미지라 읽지 않는다
 const MERGE_TOL = 12         // 압축으로 미세하게 달라진 색을 같은 색으로 합치는 기준(채널별 최대 차이)
 const SNAP_TOL = 16          // 기본 팔레트 색과 이만큼 가까우면 팔레트 색으로 정확히 맞춘다
+export const MAX_IMAGE_BYTES = 10 * 1024 * 1024
+export const MAX_IMAGE_PIXELS = 24_000_000
+export const MAX_IMAGE_SIDE = 8192
+
+export class ImageValidationError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'ImageValidationError'
+  }
+}
+
+async function validateImageFile(file) {
+  if (!file || typeof file.slice !== 'function') {
+    throw new ImageValidationError('PNG, JPG 또는 WebP 파일만 불러올 수 있어요.')
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new ImageValidationError('이미지 파일은 10MB 이하만 불러올 수 있어요.')
+  }
+
+  // 드래그하거나 메신저에서 내려받은 파일은 브라우저가 type을 비워 두거나
+  // application/octet-stream으로 주기도 한다. MIME 표기를 신뢰하는 대신 실제 파일
+  // 시그니처를 읽어 PNG/JPEG/WebP만 통과시키고, 이후 Data URL에도 정확한 MIME을 쓴다.
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+  const isPng = bytes.length >= 8
+    && [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A].every((byte, i) => bytes[i] === byte)
+  const isJpeg = bytes.length >= 3 && bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF
+  const isWebp = bytes.length >= 12
+    && String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
+    && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
+  const detectedType = isPng ? 'image/png' : isJpeg ? 'image/jpeg' : isWebp ? 'image/webp' : null
+  if (!detectedType) {
+    throw new ImageValidationError('PNG, JPG 또는 WebP 파일만 불러올 수 있어요.')
+  }
+  return detectedType
+}
+
+const withDetectedType = (file, detectedType) => (
+  file.type === detectedType ? file : file.slice(0, file.size, detectedType)
+)
+
+function validateImageDimensions(width, height) {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) {
+    throw new ImageValidationError('이미지 크기를 확인할 수 없어요.')
+  }
+  if (width > MAX_IMAGE_SIDE || height > MAX_IMAGE_SIDE || width * height > MAX_IMAGE_PIXELS) {
+    throw new ImageValidationError('이미지가 너무 커요. 한 변 8192px, 전체 2,400만 픽셀 이하의 이미지를 골라 주세요.')
+  }
+}
 
 // 파일을 디코딩해 픽셀 데이터로 — 투명한 부분은 저장할 때처럼 흰 배경 위에 합성한다.
-export function loadImageFile(file) {
+export async function loadImageFile(file) {
+  const detectedType = await validateImageFile(file)
+  const normalizedFile = withDetectedType(file, detectedType)
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file)
+    const url = URL.createObjectURL(normalizedFile)
     const img = new Image()
     img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth
-      canvas.height = img.naturalHeight
-      const ctx = canvas.getContext('2d', { willReadFrequently: true })
-      ctx.fillStyle = '#FFFFFF'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, 0, 0)
-      URL.revokeObjectURL(url)
-      resolve(ctx.getImageData(0, 0, canvas.width, canvas.height))
+      try {
+        validateImageDimensions(img.naturalWidth, img.naturalHeight)
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth
+        canvas.height = img.naturalHeight
+        const ctx = canvas.getContext('2d', { willReadFrequently: true })
+        if (!ctx) throw new Error('canvas_unavailable')
+        ctx.fillStyle = '#FFFFFF'
+        ctx.fillRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0)
+        resolve(ctx.getImageData(0, 0, canvas.width, canvas.height))
+      } catch (error) {
+        reject(error)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
       reject(new Error('이미지를 열 수 없어요'))
+    }
+    img.src = url
+  })
+}
+
+// 밑그림은 Data URL로 상태와 되돌리기 기록에 보관한다. 파일을 메모리에 올리기 전에
+// 형식·용량을 검사하고, 디코딩 직후에도 해상도를 제한해 압축률이 높은 거대 이미지로
+// 탭이 멈추는 일을 줄인다.
+export async function loadImageDataUrl(file) {
+  const detectedType = await validateImageFile(file)
+  const normalizedFile = withDetectedType(file, detectedType)
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(normalizedFile)
+    const img = new Image()
+    img.onload = () => {
+      try {
+        validateImageDimensions(img.naturalWidth, img.naturalHeight)
+      } catch (error) {
+        URL.revokeObjectURL(url)
+        reject(error)
+        return
+      }
+      URL.revokeObjectURL(url)
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = () => reject(new ImageValidationError('이미지 파일을 읽을 수 없어요.'))
+      reader.readAsDataURL(normalizedFile)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new ImageValidationError('이미지 파일을 열 수 없어요.'))
     }
     img.src = url
   })

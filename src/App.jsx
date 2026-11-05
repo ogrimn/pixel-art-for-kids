@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import EntryPage from './pages/EntryPage'
 import SetupPage from './pages/SetupPage'
 import EditorPage, { SKETCHBOOK_KEY } from './pages/EditorPage'
+import { signOut } from './utils/googleDrive'
 
 const HISTORY_PAGE_KEY = 'pixelArtPage'
 const APP_PAGES = new Set(['entry', 'setup', 'editor'])
@@ -38,6 +39,10 @@ export default function App() {
   // 동작하게 한다. 새로고침했을 때 편집 상태가 일부만 복원되는 것을 막기 위해 현재
   // 문서의 첫 기록은 항상 시작 화면으로 초기화한다.
   useEffect(() => {
+    // 새로고침은 진행 중 화면을 복원하지 않고 첫 화면으로 초기화한다. 이때도 공용 기기의
+    // 사용자 전환 경계로 취급해, 모듈 초기화가 sessionStorage에서 복원한 Drive 세션과
+    // 아직 끝나지 않은 사용자 조회를 즉시 무효화한다.
+    signOut()
     window.history.replaceState(
       { ...(window.history.state || {}), userName: '', [HISTORY_PAGE_KEY]: 'entry' },
       '',
@@ -46,6 +51,9 @@ export default function App() {
     const handlePopState = (event) => {
       const historyPage = event.state?.[HISTORY_PAGE_KEY]
       if (!APP_PAGES.has(historyPage)) return
+      // 브라우저 뒤로 가기로 첫 화면에 도달하는 경우도 공용 기기의 사용자 전환으로
+      // 취급한다. 홈 버튼과 동일하게 진행 중 로그인까지 무효화하고 Drive 세션을 끊는다.
+      if (historyPage === 'entry') signOut()
       if (typeof event.state?.userName === 'string') setUserName(event.state.userName)
       if (historyPage === 'editor') {
         const projectId = event.state?.editorProjectId
@@ -80,6 +88,9 @@ export default function App() {
   }
 
   const resetToEntry = () => {
+    // 공용 기기에서 다음 사용자가 이전 사용자의 Drive 파일을 보지 못하도록, 완전히
+    // 처음 화면으로 나갈 때는 Google 토큰도 함께 폐기한다.
+    signOut()
     setUserName('')
     setCanvasConfig({ cols: 16, rows: 16 })
     setResumeArtwork(null)

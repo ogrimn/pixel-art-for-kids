@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { BASE_GRIDS } from '../utils/gridPresets'
-import { loadImageFile, detectArtwork } from '../utils/importArtwork'
+import { loadImageFile, detectArtwork, ImageValidationError } from '../utils/importArtwork'
 
 const ACCENT_YELLOW = '#f7d070'
 const ACCENT_BLUE = '#6f9bc4'
@@ -122,8 +122,10 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
       if (result.status === 'ok') onImport(result.artwork)
       else if (result.status === 'ambiguous') setImportOptions(result.options)
       else setImportError('이 앱에서 저장한 그림이 아닌 것 같아요. 저장했던 그림 파일을 골라 주세요.')
-    } catch {
-      setImportError('그림 파일을 열 수 없어요. 다른 파일을 골라 주세요.')
+    } catch (error) {
+      setImportError(error instanceof ImageValidationError
+        ? error.message
+        : '그림 파일을 열 수 없어요. 다른 파일을 골라 주세요.')
     } finally {
       setImporting(false)
     }
@@ -178,7 +180,7 @@ export default function SetupPage({ onNext, onImport, onGoHome }) {
                 <input
                   ref={importInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/webp"
                   className="hidden"
                   onChange={handleImportFile}
                 />
