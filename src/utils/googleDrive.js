@@ -156,17 +156,26 @@ export class DriveRequestError extends Error {
 }
 
 async function driveFetch(url, opts = {}) {
-  if (!token || token.expiresAt <= Date.now()) {
-    if (token) { storeToken(null); setState({ status: 'expired' }) }
+  // 요청 시작 시점의 인증 세대와 토큰을 고정한다. 로그아웃이나 새 로그인 뒤에 예전
+  // 요청이 401로 끝나더라도 현재 사용자의 상태를 다시 expired로 뒤집어서는 안 된다.
+  const requestGeneration = authGeneration
+  const requestToken = token
+  if (!requestToken || requestToken.expiresAt <= Date.now()) {
+    if (requestToken && requestGeneration === authGeneration && token === requestToken) {
+      storeToken(null)
+      setState({ status: 'expired' })
+    }
     throw new DriveAuthError('로그인이 필요해요')
   }
   const res = await fetch(url, {
     ...opts,
-    headers: { ...(opts.headers || {}), Authorization: `Bearer ${token.value}` },
+    headers: { ...(opts.headers || {}), Authorization: `Bearer ${requestToken.value}` },
   })
   if (res.status === 401) {
-    storeToken(null)
-    setState({ status: 'expired' })
+    if (requestGeneration === authGeneration && token === requestToken) {
+      storeToken(null)
+      setState({ status: 'expired' })
+    }
     throw new DriveAuthError('로그인이 만료됐어요')
   }
   if (!res.ok) throw new DriveRequestError(res.status)

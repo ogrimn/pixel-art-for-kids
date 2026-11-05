@@ -657,7 +657,13 @@ export default function EditorPage({ userName, gridCols, gridRows, projectId, re
       clearTimeout(autosaveTimerRef.current)
       autosaveTimerRef.current = null
     }
-    if (persistCurrentSlot()) setSaveStatus('saved')
+    try {
+      if (persistCurrentSlot()) setSaveStatus('saved')
+    } catch {
+      // localStorage 용량이 가득 찬 경우에도 삭제 화면은 열려야 사용자가 공간을 비울 수 있다.
+      setSaveStatus('idle')
+      showToast('저장 공간이 부족해요. 스케치북에서 필요 없는 그림을 지워 주세요.')
+    }
     setShowSketchbook(true)
   }
 
