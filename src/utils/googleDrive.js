@@ -18,7 +18,12 @@ const TOKEN_KEY = 'pixel_art_drive_token'
 
 // ── 로그인 상태 저장소 (여러 컴포넌트가 useDrive()로 구독) ─────────────────────
 // status: 'disabled'(클라이언트 ID 없음) | 'signedOut' | 'connecting' | 'signedIn' | 'expired'
-let state = { status: GOOGLE_CLIENT_ID ? 'signedOut' : 'disabled', user: null }
+let state = {
+  status: GOOGLE_CLIENT_ID ? 'signedOut' : 'disabled',
+  user: null,
+  gisReady: !GOOGLE_CLIENT_ID,
+  gisLoading: Boolean(GOOGLE_CLIENT_ID),
+}
 const listeners = new Set()
 const setState = (patch) => {
   state = { ...state, ...patch }
@@ -64,32 +69,54 @@ function loadGis() {
   return gisPromise
 }
 
-// 로그인 팝업은 브라우저가 막지 않도록 반드시 버튼 클릭 같은 사용자 동작 안에서 호출해야 한다.
-export async function signIn() {
-  if (!GOOGLE_CLIENT_ID) return
-  const prev = state.status
-  setState({ status: 'connecting' })
-  try {
-    await loadGis()
-    const resp = await new Promise((resolve, reject) => {
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: SCOPE,
-        callback: (r) => (r.error ? reject(new Error(r.error)) : resolve(r)),
-        error_callback: (e) => reject(new Error(e?.type || 'popup_closed')),
-      })
-      // 한 번 동의한 계정이면 동의 화면 없이 바로 토큰이 발급된다
-      client.requestAccessToken(prev === 'expired' ? { prompt: '' } : {})
+function prepareGis() {
+  setState({ gisReady: false, gisLoading: true })
+  return loadGis()
+    .then(() => setState({ gisReady: true, gisLoading: false }))
+    .catch((error) => {
+      setState({ gisReady: false, gisLoading: false })
+      throw error
     })
+}
+
+// 로그인 버튼을 누르기 전에 GIS를 미리 준비한다. OAuth 팝업 요청은 반드시 실제
+// 클릭 이벤트 안에서 동기적으로 시작해야 브라우저의 팝업 차단에 걸리지 않는다.
+if (GOOGLE_CLIENT_ID) {
+  prepareGis().catch(() => {})
+}
+
+// 로그인 팝업은 브라우저가 막지 않도록 반드시 버튼 클릭 같은 사용자 동작 안에서 호출해야 한다.
+export function signIn() {
+  if (!GOOGLE_CLIENT_ID) return Promise.resolve()
+  const prev = state.status
+  if (!window.google?.accounts?.oauth2) {
+    // 네트워크 오류 등으로 사전 로드가 실패했다면 다음 클릭을 위해 다시 준비한다.
+    prepareGis().catch(() => {})
+    return Promise.reject(new Error('gis_not_ready'))
+  }
+  setState({ status: 'connecting' })
+  // requestAccessToken 호출까지는 await 없이 진행해 클릭의 user activation을 유지한다.
+  const tokenRequest = new Promise((resolve, reject) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: SCOPE,
+      callback: (r) => (r.error ? reject(new Error(r.error)) : resolve(r)),
+      error_callback: (e) => reject(new Error(e?.type || 'popup_closed')),
+    })
+    // 한 번 동의한 계정이면 동의 화면 없이 바로 토큰이 발급된다
+    client.requestAccessToken(prev === 'expired' ? { prompt: '' } : {})
+  })
+
+  return tokenRequest.then(async (resp) => {
     if (!window.google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
       throw new Error('drive_scope_denied')
     }
     storeToken({ value: resp.access_token, expiresAt: Date.now() + resp.expires_in * 1000 })
     await loadUser()
-  } catch (e) {
+  }).catch((e) => {
     setState({ status: prev === 'expired' ? 'expired' : 'signedOut' })
     throw e
-  }
+  })
 }
 
 export function signOut() {
@@ -120,6 +147,13 @@ if (GOOGLE_CLIENT_ID) {
 }
 
 export class DriveAuthError extends Error {}
+export class DriveRequestError extends Error {
+  constructor(status) {
+    super(`드라이브 요청 실패 (${status})`)
+    this.name = 'DriveRequestError'
+    this.status = status
+  }
+}
 
 async function driveFetch(url, opts = {}) {
   if (!token || token.expiresAt <= Date.now()) {
@@ -135,7 +169,7 @@ async function driveFetch(url, opts = {}) {
     setState({ status: 'expired' })
     throw new DriveAuthError('로그인이 만료됐어요')
   }
-  if (!res.ok) throw new Error(`드라이브 요청 실패 (${res.status})`)
+  if (!res.ok) throw new DriveRequestError(res.status)
   return res
 }
 
@@ -160,11 +194,21 @@ function getFolderId() {
   return folderIdPromise
 }
 
-function multipartBody(metadata, blob) {
-  const form = new FormData()
-  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }))
-  form.append('file', blob)
-  return form
+function multipartRequest(metadata, blob) {
+  const boundary = `pixel_art_${Date.now()}_${Math.random().toString(16).slice(2)}`
+  const body = new Blob([
+    `--${boundary}\r\n`,
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n',
+    JSON.stringify(metadata),
+    `\r\n--${boundary}\r\n`,
+    `Content-Type: ${blob.type || 'image/png'}\r\n\r\n`,
+    blob,
+    `\r\n--${boundary}--\r\n`,
+  ])
+  return {
+    body,
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+  }
 }
 
 // 작품 하나 = 드라이브의 PNG 파일 하나. 교사가 드라이브에서 그대로 패들렛에 올릴 수 있고,
@@ -177,20 +221,23 @@ export async function saveArtworkToDrive({ driveId, fileName, blob, cols, rows }
   }
   if (driveId) {
     try {
+      const request = multipartRequest(metadata, blob)
       const updated = await driveJson(`${UPLOAD_API}/files/${driveId}?uploadType=multipart&fields=id`, {
         method: 'PATCH',
-        body: multipartBody(metadata, blob),
+        ...request,
       })
       return updated.id
     } catch (e) {
-      // 드라이브에서 파일을 지웠다면 새로 만든다
-      if (e instanceof DriveAuthError) throw e
+      // 드라이브에서 파일을 지운 것이 확실할 때만 새 파일을 만든다. 일시적인 서버·네트워크
+      // 오류에서 새 파일을 만들면 같은 작품이 중복될 수 있으므로 다른 오류는 그대로 알린다.
+      if (!(e instanceof DriveRequestError) || e.status !== 404) throw e
     }
   }
   const parent = await getFolderId()
+  const request = multipartRequest({ ...metadata, parents: [parent] }, blob)
   const created = await driveJson(`${UPLOAD_API}/files?uploadType=multipart&fields=id`, {
     method: 'POST',
-    body: multipartBody({ ...metadata, parents: [parent] }, blob),
+    ...request,
   })
   return created.id
 }

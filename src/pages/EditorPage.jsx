@@ -12,7 +12,7 @@ import { PRESET_COLORS } from '../utils/palette'
 import { useDrive, saveArtworkToDrive } from '../utils/googleDrive'
 
 const MAX_HISTORY = 20
-const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
+export const SKETCHBOOK_KEY = 'pixel_art_sketchbook'
 const ACCENT_YELLOW = '#f7d070'
 const DANGER = '#f87171'
 const PAGE_BG = '#1a1c1e'
@@ -107,7 +107,7 @@ function HeaderBtn({ onClick, disabled, children, title, variant = 'ghost', icon
   )
 }
 
-export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork, onGoToSetup, onEditArtwork }) {
+export default function EditorPage({ userName, gridCols, gridRows, projectId, resumeArtwork, onGoToSetup, onEditArtwork, onProjectChange }) {
   const [pixels, setPixels] = useState(() => (
     resumeArtwork?.pixels ? resumeArtwork.pixels.map(row => [...row]) : makeEmpty(gridRows, gridCols)
   ))
@@ -202,7 +202,7 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
 
   // 자동 저장이 덮어쓸 스케치북 항목의 고유 ID. 불러온 작품이면 그 ID를 그대로 이어받고,
   // 새로 시작한 캔버스면 이 세션 동안 고정되는 새 ID를 발급해 매번 새 항목이 쌓이지 않게 한다.
-  const projectIdRef = useRef(resumeArtwork?.id ?? Date.now())
+  const projectIdRef = useRef(resumeArtwork?.id ?? projectId ?? Date.now())
   const currentFileNameRef = useRef(resumeArtwork?.fileName || null)
   // 마지막으로 저장을 예약한 pixels 참조 — 최초값과 동일하면(StrictMode의 개발 모드 이펙트
   // 이중 실행 포함) 실제 편집이 아니므로 자동 저장을 건너뛴다.
@@ -483,6 +483,8 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
     currentFileNameRef.current = entry.fileName
     return entry
   }, [isDirty, buildSketchbookEntry, buildDefaultFileName])
+  const persistCurrentSlotRef = useRef(persistCurrentSlot)
+  persistCurrentSlotRef.current = persistCurrentSlot
 
   // 현재 슬롯의 그림을 로그인한 사람의 구글 드라이브에 PNG로 올린다(같은 작품이면 같은 파일을 덮어씀)
   const syncToDrive = useCallback(() => {
@@ -532,7 +534,12 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
     if (driveSignedIn && driveSaveStatus === 'error') syncToDriveRef.current()
   }, [driveSignedIn]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => flushDriveSync, [flushDriveSync]) // 편집 화면을 떠날 때 남은 저장을 마저 올린다
+  // 브라우저 뒤로 가기처럼 편집기 내부 버튼을 거치지 않고 화면이 닫혀도 마지막 변경을
+  // 동기적으로 로컬 스케치북에 남긴다. 드라이브의 예약 저장도 함께 즉시 시작한다.
+  useEffect(() => () => {
+    persistCurrentSlotRef.current()
+    flushDriveSync()
+  }, [flushDriveSync])
 
   const handleClearAll = () => {
     // 캔버스를 비우기 직전까지 그린 그림을 디바운스 없이 즉시 저장
@@ -540,8 +547,10 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
     flushDriveSync()
     setSaveStatus('saved')
     // 지금까지의 작업은 안전하게 보존했으니, 이제부터의 자동 저장은 새 캔버스를 대상으로 하도록 새 프로젝트 ID 발급
-    projectIdRef.current = Date.now()
+    const nextProjectId = Date.now()
+    projectIdRef.current = nextProjectId
     currentFileNameRef.current = null
+    onProjectChange?.({ projectId: nextProjectId, cols: gridCols, rows: gridRows, artwork: null })
 
     setHistory(prev => [...prev.slice(-(MAX_HISTORY - 1)), { pixels: pixels.map(r => [...r]), tracingImage }])
     setFuture([])
@@ -586,11 +595,12 @@ export default function EditorPage({ userName, gridCols, gridRows, resumeArtwork
     flushDriveSync()
     projectIdRef.current = entryId
     currentFileNameRef.current = name
+    onProjectChange?.({ projectId: entryId, cols: gridCols, rows: gridRows, artwork: entry })
     setSaveStatus('saved')
     syncToDrive()
 
     setIsSaveModalOpen(false)
-  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, flushDriveSync, syncToDrive])
+  }, [saveFileName, buildDefaultFileName, buildSketchbookEntry, getCanvasBlob, userName, flushDriveSync, syncToDrive, onProjectChange, gridCols, gridRows])
 
   // 실시간 자동 저장: 그림이 바뀔 때마다 500ms 디바운스 후 localStorage 스케치북을
   // 현재 프로젝트 ID로 덮어쓴다. pixels 참조가 마지막 예약 시점과 같으면(최초 마운트,

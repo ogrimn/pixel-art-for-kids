@@ -20,6 +20,7 @@ function signInErrorMessage(e) {
   const code = e?.message || ''
   if (code === 'popup_closed' || code === 'access_denied') return null
   if (code === 'popup_failed_to_open') return '로그인 창이 막혔어요. 팝업 차단을 풀고 다시 눌러 주세요.'
+  if (code === 'gis_not_ready') return '구글 로그인을 준비하고 있어요. 잠시 후 다시 눌러 주세요.'
   if (code === 'drive_scope_denied') return '드라이브 저장에 체크해야 그림을 저장할 수 있어요.'
   return '구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.'
 }
@@ -97,10 +98,11 @@ export default function DriveButton({ onError }) {
         <button
           ref={buttonRef}
           onClick={handleSignIn}
+          disabled={drive.gisLoading || drive.status === 'connecting'}
           aria-label="구글 드라이브 다시 연결"
           onMouseEnter={showTooltip}
           onMouseLeave={hideTooltip}
-          className="font-pixel flex items-center gap-2 h-10 px-4 rounded-full text-sm shrink-0 whitespace-nowrap hover:brightness-125"
+          className="font-pixel flex items-center gap-2 h-10 px-4 rounded-full text-sm shrink-0 whitespace-nowrap hover:brightness-125 disabled:cursor-wait disabled:opacity-50"
           style={{ background: PANEL_BG, color: ACCENT_YELLOW, border: `1px solid ${ACCENT_YELLOW}` }}
         >
           <CloudIcon className="w-5 h-5" />
@@ -157,10 +159,11 @@ export default function DriveButton({ onError }) {
             </button>
             <button
               onClick={handleSignIn}
-              className="font-pixel font-bold flex-1 py-3 rounded-full text-sm transition-colors active:scale-[0.97]"
+              disabled={drive.gisLoading || drive.status === 'connecting'}
+              className="font-pixel font-bold flex-1 py-3 rounded-full text-sm transition-colors active:scale-[0.97] disabled:cursor-wait disabled:opacity-60"
               style={{ background: ACCENT_YELLOW, color: '#000000' }}
             >
-              구글로 로그인
+              {drive.gisLoading ? '로그인 준비 중...' : !drive.gisReady ? '로그인 다시 준비' : drive.status === 'connecting' ? '연결 중...' : '구글로 로그인'}
             </button>
           </div>
         </Modal>
