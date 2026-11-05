@@ -36,6 +36,9 @@ export function useDrive() {
 
 let token = null // { value, expiresAt }
 let folderIdPromise = null
+// 로그인 팝업은 비동기로 끝나므로, 사용자가 홈으로 나가거나 로그아웃한 뒤 도착한
+// 예전 팝업 응답이 세션을 되살리지 못하게 요청 세대를 비교한다.
+let authGeneration = 0
 
 function readStoredToken() {
   try {
@@ -88,6 +91,7 @@ if (GOOGLE_CLIENT_ID) {
 // 로그인 팝업은 브라우저가 막지 않도록 반드시 버튼 클릭 같은 사용자 동작 안에서 호출해야 한다.
 export function signIn() {
   if (!GOOGLE_CLIENT_ID) return Promise.resolve()
+  const generation = ++authGeneration
   const prev = state.status
   if (!window.google?.accounts?.oauth2) {
     // 네트워크 오류 등으로 사전 로드가 실패했다면 다음 클릭을 위해 다시 준비한다.
@@ -110,18 +114,25 @@ export function signIn() {
   })
 
   return tokenRequest.then(async (resp) => {
+    if (generation !== authGeneration) throw new Error('signin_cancelled')
     if (!window.google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
       throw new Error('drive_scope_denied')
     }
     storeToken({ value: resp.access_token, expiresAt: Date.now() + resp.expires_in * 1000 })
-    await loadUser()
+    const restored = await loadUser(generation)
+    if (!restored) throw new Error('signin_cancelled')
   }).catch((e) => {
-    setState({ status: prev === 'expired' ? 'expired' : 'signedOut' })
+    // 로그아웃 이후 도착한 예전 요청은 현재(또는 더 새로운 로그인) 상태를 건드리지 않는다.
+    if (generation === authGeneration) {
+      storeToken(null)
+      setState({ status: prev === 'expired' ? 'expired' : 'signedOut' })
+    }
     throw e
   })
 }
 
 export function signOut() {
+  authGeneration++
   if (token && window.google?.accounts?.oauth2) {
     window.google.accounts.oauth2.revoke(token.value, () => {})
   }
@@ -130,9 +141,11 @@ export function signOut() {
   setState({ status: GOOGLE_CLIENT_ID ? 'signedOut' : 'disabled', user: null })
 }
 
-async function loadUser() {
+async function loadUser(generation = authGeneration) {
   const about = await driveJson(`${API}/about?fields=user(displayName,emailAddress,photoLink)`)
+  if (generation !== authGeneration) return false
   setState({ status: 'signedIn', user: about.user })
+  return true
 }
 
 export class DriveAuthError extends Error {}
@@ -145,17 +158,26 @@ export class DriveRequestError extends Error {
 }
 
 async function driveFetch(url, opts = {}) {
-  if (!token || token.expiresAt <= Date.now()) {
-    if (token) { storeToken(null); setState({ status: 'expired' }) }
+  // 요청 시작 시점의 인증 세대와 토큰을 고정한다. 로그아웃이나 새 로그인 뒤에 예전
+  // 요청이 401로 끝나더라도 현재 사용자의 상태를 다시 expired로 뒤집어서는 안 된다.
+  const requestGeneration = authGeneration
+  const requestToken = token
+  if (!requestToken || requestToken.expiresAt <= Date.now()) {
+    if (requestToken && requestGeneration === authGeneration && token === requestToken) {
+      storeToken(null)
+      setState({ status: 'expired' })
+    }
     throw new DriveAuthError('로그인이 필요해요')
   }
   const res = await fetch(url, {
     ...opts,
-    headers: { ...(opts.headers || {}), Authorization: `Bearer ${token.value}` },
+    headers: { ...(opts.headers || {}), Authorization: `Bearer ${requestToken.value}` },
   })
   if (res.status === 401) {
-    storeToken(null)
-    setState({ status: 'expired' })
+    if (requestGeneration === authGeneration && token === requestToken) {
+      storeToken(null)
+      setState({ status: 'expired' })
+    }
     throw new DriveAuthError('로그인이 만료됐어요')
   }
   if (!res.ok) throw new DriveRequestError(res.status)
@@ -277,9 +299,11 @@ export async function trashDriveArtwork(driveId) {
 if (GOOGLE_CLIENT_ID) {
   const saved = readStoredToken()
   if (saved) {
+    const generation = authGeneration
     token = saved
     setState({ status: 'connecting' })
-    loadUser().catch(() => {
+    loadUser(generation).catch(() => {
+      if (generation !== authGeneration) return
       storeToken(null)
       setState({ status: 'signedOut', user: null })
     })
