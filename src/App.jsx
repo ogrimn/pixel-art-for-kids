@@ -39,6 +39,10 @@ export default function App() {
   // 동작하게 한다. 새로고침했을 때 편집 상태가 일부만 복원되는 것을 막기 위해 현재
   // 문서의 첫 기록은 항상 시작 화면으로 초기화한다.
   useEffect(() => {
+    // 새로고침은 진행 중 화면을 복원하지 않고 첫 화면으로 초기화한다. 이때도 공용 기기의
+    // 사용자 전환 경계로 취급해, 모듈 초기화가 sessionStorage에서 복원한 Drive 세션과
+    // 아직 끝나지 않은 사용자 조회를 즉시 무효화한다.
+    signOut()
     window.history.replaceState(
       { ...(window.history.state || {}), userName: '', [HISTORY_PAGE_KEY]: 'entry' },
       '',
