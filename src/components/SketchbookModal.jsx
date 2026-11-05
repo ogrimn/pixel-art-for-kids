@@ -79,6 +79,31 @@ function EmptyState({ title, desc, children }) {
   )
 }
 
+// 드라이브에 예전 메타데이터가 없어 칸 수를 자동으로 확정하지 못했을 때 보여 줄
+// 후보 미리보기. SetupPage의 파일 불러오기와 같은 방식으로 실제 칸 배열을 그린다.
+function ArtworkPreview({ artwork, size = 140 }) {
+  const canvasRef = useRef(null)
+  useEffect(() => {
+    const ctx = canvasRef.current.getContext('2d')
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillRect(0, 0, artwork.cols, artwork.rows)
+    artwork.pixels.forEach((row, r) => row.forEach((color, c) => {
+      if (!color) return
+      ctx.fillStyle = color
+      ctx.fillRect(c, r, 1, 1)
+    }))
+  }, [artwork])
+  return (
+    <canvas
+      ref={canvasRef}
+      width={artwork.cols}
+      height={artwork.rows}
+      className="rounded-md"
+      style={{ width: '100%', maxWidth: size, aspectRatio: `${artwork.cols} / ${artwork.rows}`, imageRendering: 'pixelated' }}
+    />
+  )
+}
+
 function DriveTab({ onEdit, onCountChange }) {
   const drive = useDrive()
   const [items, setItems] = useState(null) // null = 불러오는 중
@@ -86,6 +111,7 @@ function DriveTab({ onEdit, onCountChange }) {
   const [blobs, setBlobs] = useState({}) // driveId → { blob, url }
   const blobsRef = useRef(blobs); blobsRef.current = blobs
   const [openingId, setOpeningId] = useState(null)
+  const [importChoice, setImportChoice] = useState(null) // { item, options }: 격자가 애매한 드라이브 그림
   const signedIn = drive.status === 'signedIn'
 
   useEffect(() => {
@@ -126,18 +152,31 @@ function DriveTab({ onEdit, onCountChange }) {
 
   const getBlob = async (item) => blobs[item.driveId]?.blob || downloadDriveArtwork(item.driveId)
 
+  const openArtwork = (item, art) => {
+    // 이 기기 스케치북에 같은 드라이브 파일이 있으면 그 슬롯을 이어서 쓴다(목록에 같은 그림이 두 번 쌓이지 않게)
+    const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').find(it => it.driveId === item.driveId)
+    onEdit({ ...art, id: local?.id ?? Date.now(), fileName: item.fileName, driveId: item.driveId, imported: true })
+  }
+
   const handleEdit = async (item) => {
     if (openingId) return
     setOpeningId(item.driveId)
     try {
       const image = await loadImageFile(await getBlob(item))
-      const art = item.cols && item.rows
-        ? decodeArtwork(image, item.cols, item.rows)
-        : (detectArtwork(image).artwork || null)
+      let art
+      if (item.cols && item.rows) {
+        art = decodeArtwork(image, item.cols, item.rows)
+      } else {
+        const result = detectArtwork(image)
+        if (result.status === 'ambiguous') {
+          setImportChoice({ item, options: result.options })
+          setOpeningId(null)
+          return
+        }
+        art = result.status === 'ok' ? result.artwork : null
+      }
       if (!art) throw new Error('decode')
-      // 이 기기 스케치북에 같은 드라이브 파일이 있으면 그 슬롯을 이어서 쓴다(목록에 같은 그림이 두 번 쌓이지 않게)
-      const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').find(it => it.driveId === item.driveId)
-      onEdit({ ...art, id: local?.id ?? Date.now(), fileName: item.fileName, driveId: item.driveId, imported: true })
+      openArtwork(item, art)
     } catch {
       setError('그림을 여는 데 실패했어요. 다시 눌러 주세요.')
       setOpeningId(null)
@@ -198,6 +237,43 @@ function DriveTab({ onEdit, onCountChange }) {
           />
         ))}
       </div>
+
+      {importChoice && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/60 p-4"
+          onClick={e => e.target === e.currentTarget && setImportChoice(null)}
+        >
+          <div className="w-full max-w-2xl rounded-2xl bg-[#111214] p-5 sm:p-6">
+            <p className="font-pixel-kr text-center text-xl text-white sm:text-2xl break-keep">어떤 그림이 내 그림이랑 똑같아 보여요?</p>
+            <p className="mt-2 text-center text-sm text-gray-400 sm:text-base">똑같아 보이는 그림을 눌러 주세요</p>
+            <div className="mt-6 grid grid-cols-3 gap-2 sm:gap-4">
+              {importChoice.options.map(option => (
+                <button
+                  key={`${option.cols}x${option.rows}`}
+                  onClick={() => {
+                    const { item } = importChoice
+                    setImportChoice(null)
+                    openArtwork(item, option)
+                  }}
+                  className="flex flex-col items-center gap-2 rounded-2xl bg-[#1a1c1e] p-2 transition-all hover:brightness-125 active:scale-[0.98] sm:gap-3 sm:p-4"
+                  style={{ border: '1px solid #f7d070' }}
+                >
+                  <ArtworkPreview artwork={option} />
+                  <span className="font-pixel whitespace-nowrap text-sm text-white tabular-nums sm:text-lg">{option.cols} × {option.rows}</span>
+                </button>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => setImportChoice(null)}
+                className="font-pixel rounded-full bg-[#1a1c1e] px-8 py-3 text-white hover:brightness-125"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
