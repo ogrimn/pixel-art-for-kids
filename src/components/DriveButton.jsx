@@ -175,8 +175,9 @@ export default function DriveButton({ onError }) {
             <p className="font-code text-[14px] text-gray-300">{drive.user?.displayName}</p>
             <p className="font-code text-[13px] text-gray-500">{drive.user?.emailAddress}</p>
             <p className="font-code text-[13px] text-gray-400 leading-relaxed break-keep mt-2">
-              저장 버튼을 누르면 드라이브의 '픽셀아트' 폴더에 저장돼요.
-              다른 사람이 쓸 기기라면 다 쓴 뒤 꼭 로그아웃해 주세요.
+              저장 버튼을 누르면 드라이브의 '픽셀아트' 폴더에 저장돼요.<br />
+              다른 사람과 같이 쓰는 기기라면 다 쓴 뒤 꼭 로그아웃하고,<br />
+              구글 계정에서도 로그아웃해 주세요.
             </p>
           </div>
           <div className="flex gap-3 w-full">
