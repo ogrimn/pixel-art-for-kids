@@ -119,6 +119,11 @@ export default function EntryPage({ onNext }) {
             </button>
           </form>
 
+          {/* 구글 로그인 동의 화면과 학부모 안내에 쓰는 개인정보처리방침(정적 페이지 public/privacy.html) */}
+          <a href="/privacy.html" className="font-code mt-6 text-xs text-gray-500 underline-offset-4 hover:text-gray-300 hover:underline">
+            개인정보처리방침
+          </a>
+
         </div>
       </main>
     </div>
