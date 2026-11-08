@@ -121,13 +121,13 @@ export default function EntryPage({ onNext }) {
 
           {/* 앱 소개 — 처음 온 사람(학부모·교사)과 구글 브랜드 인증 심사에 앱이 무엇인지 알려 준다.
               구글은 홈페이지가 로그인 화면만 있지 않고 앱을 설명하며 개인정보처리방침으로 이어질 것을 요구한다. */}
-          <p className="font-code mt-8 max-w-sm text-center text-xs leading-relaxed text-gray-500 break-keep">
+          <p className="font-code mt-8 max-w-sm text-center text-xs leading-relaxed text-gray-400 break-keep">
             PIXEL ART는 칸을 칠해 도트 그림을 그리는 학생용 그리기 도구예요.
             그림은 이 기기에 자동 저장되고, 구글 로그인을 하면 내 구글 드라이브에도 저장할 수 있어요.
           </p>
 
           {/* 구글 로그인 동의 화면과 학부모 안내에 쓰는 개인정보처리방침(정적 페이지 public/privacy.html) */}
-          <a href="/privacy.html" className="font-code mt-3 text-xs text-gray-500 underline-offset-4 hover:text-gray-300 hover:underline">
+          <a href="/privacy.html" className="font-code mt-3 text-xs text-gray-400 underline-offset-4 hover:text-gray-200 hover:underline">
             개인정보처리방침
           </a>
 
