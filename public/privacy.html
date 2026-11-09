@@ -20,17 +20,10 @@
       line-height: 1.75;
       word-break: keep-all;
     }
-    main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
-    h1 { color: #ffffff; font-size: 28px; margin: 0 0 8px; }
-    .meta { color: #9ca3af; font-size: 14px; margin: 0 0 32px; }
-    .summary {
-      background: #111214;
-      border: 1px solid rgba(247, 208, 112, 0.45);
-      border-radius: 16px;
-      padding: 16px 20px;
-      margin-bottom: 32px;
-    }
-    .summary strong { color: #f7d070; }
+    /* 화면이 넓으면 그만큼 넓게 써서 양옆에 빈 공간을 남긴 채 줄바꿈하지 않는다 */
+    main { margin: 0 auto; padding: 40px 24px 64px; }
+    h1 { text-align: center; color: #ffffff; font-size: 28px; margin: 0 0 8px; }
+    .meta { text-align: center; color: #9ca3af; font-size: 14px; margin: 0 0 32px; }
     h2 { color: #f7d070; font-size: 18px; margin: 32px 0 8px; }
     ul { padding-left: 20px; margin: 8px 0; }
     li { margin: 4px 0; }
@@ -41,64 +34,57 @@
 <body>
   <main>
     <h1>개인정보처리방침</h1>
-    <p class="meta">픽셀아트 (https://pixelart.oneulgm.com) · 시행일 2026년 11월 5일 · 주소 변경 2026년 11월 9일</p>
+    <p class="meta">픽셀아트 (https://pixelart.oneulgm.com)</p>
 
-    <div class="summary">
-      <strong>한눈에 보기</strong>
-      <ul>
-        <li>픽셀아트는 <strong>운영자의 서버에 개인정보나 그림을 저장하지 않아요.</strong></li>
-        <li>그림은 쓰고 있는 기기의 브라우저, 그리고 구글 로그인을 했다면 <strong>본인의 구글 드라이브</strong>에만 저장돼요.</li>
-        <li>구글 드라이브는 <strong>이 앱이 만든 그림 파일만</strong> 볼 수 있고, 다른 파일은 볼 수 없어요.</li>
-        <li>광고, 사용 분석 도구를 쓰지 않아요.</li>
-      </ul>
-    </div>
-
-    <h2>1. 처리하는 정보와 저장 위치</h2>
+    <h2>1. 수집하는 정보</h2>
     <ul>
-      <li><strong>이름(닉네임):</strong> 처음 화면에서 입력한 이름은 그림을 구분하는 데 쓰이며, 사용 중인 기기의 브라우저 저장소에 저장돼요. 운영자에게는 전송되지 않아요.
-        <br />이름은 그림의 기본 파일 이름(예: 철수_1105)에도 들어가요. 그래서 그림을 PNG로 내려받거나 구글 드라이브에 저장하면, 이름이 들어간 파일 이름 그대로 기기나 <strong>본인의 구글 드라이브</strong>에 저장돼요. 저장할 때 파일 이름은 바꿀 수 있어요.</li>
-      <li><strong>그림:</strong> 그리는 동안 브라우저 저장소(나의 스케치북)에 자동 저장돼요. '그림 저장(PNG)'을 누르면 기기에 이미지 파일로 내려받아요.</li>
-      <li><strong>밑그림 사진:</strong> 불러온 사진은 브라우저 안에서만 처리되고 어디에도 전송되지 않아요.</li>
+      <li>운영자 서버에는 이름이나 그림을 저장하지 않아요.</li>
+      <li>광고, 사용 분석 도구를 쓰지 않아요.</li>
     </ul>
 
-    <h2>2. 구글 로그인(선택)과 구글 드라이브</h2>
+    <h2>2. 저장되는 곳</h2>
     <ul>
-      <li>구글 로그인은 선택 사항이에요. 로그인하지 않아도 모든 그리기 기능을 쓸 수 있어요.</li>
-      <li>로그인하면 '드라이브에 저장'을 눌렀을 때 그림(PNG)이 <strong>로그인한 사람 본인의 구글 드라이브 '픽셀아트' 폴더</strong>에 저장돼요.</li>
-      <li>요청하는 권한은 <code>drive.file</code> 하나예요. 이 권한으로는 이 앱이 만든 파일에만 접근할 수 있고, 드라이브의 다른 파일·사진·메일은 볼 수 없어요.</li>
-      <li>로그인한 계정의 이름, 이메일, 프로필 사진은 화면에 '누구로 로그인했는지' 보여 주는 데만 쓰이며 저장하거나 전송하지 않아요.</li>
-      <li>로그인 정보(구글이 발급한 1시간짜리 접근 토큰)는 브라우저 탭을 닫으면 사라지는 저장소에만 보관되고, 로그아웃하면 구글에 권한 취소를 요청해요.</li>
-      <li>구글 드라이브에서 받은 정보는 그림 저장·불러오기에만 쓰며, 다른 사람에게 제공하거나 광고에 쓰지 않아요. 이 앱의 구글 사용자 데이터 사용은 <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer">Google API 서비스 사용자 데이터 정책</a>(제한적 사용 요건 포함)을 따라요.</li>
+      <li>이름과 그림은 사용 중인 기기의 브라우저에 저장돼요.</li>
+      <li>그림 파일 이름에는 입력한 이름이 들어가요(예: 철수_1105).</li>
+      <li>밑그림 사진은 기기 안에서만 쓰이고 어디에도 보내지 않아요.</li>
     </ul>
 
-    <h2>3. 제3자 제공 및 처리 위탁</h2>
+    <h2>3. 구글 로그인 (선택)</h2>
     <ul>
-      <li>운영자는 이용자의 개인정보를 제3자에게 제공하지 않아요.</li>
-      <li>웹사이트는 Vercel Inc.(미국)의 호스팅 서비스로 제공돼요. 웹사이트에 접속할 때 Vercel이 보안과 운영을 위해 접속 기록(IP 주소, 접속 시각, 브라우저 정보 등)을 자체 정책에 따라 처리할 수 있어요.</li>
-      <li>구글 로그인과 드라이브 저장은 Google이 제공하는 서비스이며, Google의 개인정보처리방침이 적용돼요.</li>
+      <li>로그인하면 '드라이브에 저장'한 그림이 내 구글 드라이브 '픽셀아트' 폴더에 저장돼요.</li>
+      <li>이 앱이 만든 그림 파일만 볼 수 있고, 드라이브의 다른 파일은 볼 수 없어요.</li>
+      <li>로그인한 계정의 이름, 이메일, 사진은 화면에 보여 주는 데만 써요.</li>
+      <li>구글에서 받은 정보는 그림 저장과 불러오기에만 쓰며, <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener noreferrer">Google API 서비스 사용자 데이터 정책</a>을 따라요.</li>
     </ul>
 
-    <h2>4. 만 14세 미만 아동</h2>
+    <h2>4. 제3자 제공</h2>
     <ul>
-      <li>픽셀아트는 학교 수업과 가정에서 학생이 쓰는 그리기 도구예요. 로그인 없이 쓸 때는 운영자가 개인정보를 받지 않아요.</li>
-      <li>만 14세 미만 학생이 구글 계정으로 로그인하는 경우, 보호자나 교사의 지도 아래 사용해 주세요. 구글 계정의 보호자 관리(Family Link) 설정에 따라 로그인이 제한될 수 있어요.</li>
+      <li>운영자는 개인정보를 다른 사람이나 회사에 팔거나 넘기지 않아요.</li>
+      <li>구글 로그인을 하면 로그인과 드라이브 저장은 Google이 처리해요. 이때 저장한 그림과 파일 이름(입력한 이름 포함)이 내 구글 드라이브로 보내지고, <a href="https://policies.google.com/privacy?hl=ko" rel="noopener noreferrer">Google 개인정보처리방침</a>이 적용돼요.</li>
+      <li>사이트는 Vercel(미국)에서 운영돼 접속 기록(IP 주소 등)이 남을 수 있어요.</li>
     </ul>
 
-    <h2>5. 정보 삭제 방법</h2>
+    <h2>5. 만 14세 미만 이용</h2>
     <ul>
-      <li><strong>이 기기에 저장된 그림:</strong> 앱의 '나의 스케치북'에서 삭제하거나, 브라우저의 사이트 데이터를 지우면 삭제돼요.</li>
-      <li><strong>드라이브에 저장된 그림:</strong> 앱의 '내 구글 드라이브' 탭에서 삭제하면 바로 지워지지 않고 <strong>구글 드라이브 휴지통</strong>으로 옮겨져요(실수로 지워도 되살릴 수 있도록). 휴지통의 파일은 30일이 지나면 구글이 자동으로 영구 삭제하고, 바로 지우려면 구글 드라이브 휴지통에서 '영구 삭제'를 누르면 돼요. 구글 드라이브의 '픽셀아트' 폴더에서 직접 삭제해도 돼요.</li>
-      <li><strong>구글 드라이브 권한 해제:</strong> 앱에서 로그아웃하거나, 구글 계정 관리 → 보안 → '타사 앱 및 서비스'에서 픽셀아트의 접근 권한을 삭제할 수 있어요.</li>
+      <li>만 14세 미만 학생이 구글 계정으로 로그인하는 경우, 보호자나 교사의 지도 아래 사용해 주세요.</li>
     </ul>
 
-    <h2>6. 문의</h2>
+    <h2>6. 지우는 방법</h2>
     <ul>
-      <li>운영자: 오늘의그림</li>
-      <li>이메일: <a href="mailto:ogrim6012@gmail.com">ogrim6012@gmail.com</a></li>
+      <li>이 기기: '나의 스케치북'에서 지우거나 브라우저 데이터를 지워요.</li>
+      <li>드라이브: 앱에서 지우면 휴지통으로 가고, 30일 뒤 자동으로 지워져요.</li>
+      <li>권한 해제: 구글 계정 → 보안 → 타사 앱 및 서비스에서 픽셀아트를 삭제해요.</li>
     </ul>
 
-    <h2>7. 변경 안내</h2>
-    <p>이 방침이 바뀌면 이 페이지에 변경 내용과 시행일을 알려요.</p>
+    <h2>7. 문의</h2>
+    <ul>
+      <li>오늘의그림 · <a href="mailto:ogrim6012@gmail.com">ogrim6012@gmail.com</a></li>
+    </ul>
+
+    <h2>8. 시행일</h2>
+    <ul>
+      <li>2026년 11월 9일</li>
+    </ul>
 
     <a class="back" href="/">← 픽셀아트로 돌아가기</a>
   </main>
