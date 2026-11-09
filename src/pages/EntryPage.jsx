@@ -119,15 +119,21 @@ export default function EntryPage({ onNext }) {
             </button>
           </form>
 
-          {/* 앱 소개 + 개인정보처리방침 한 줄 — 처음 온 사람(학부모·교사)과 구글 브랜드 인증 심사에 앱이 무엇인지
+          {/* 앱 소개 + 개인정보처리방침·이용약관 한 줄 — 처음 온 사람(학부모·교사)과 구글 브랜드 인증 심사에 앱이 무엇인지
               알려 준다(구글은 홈페이지가 로그인 화면만 있지 않고 앱을 설명하며 방침으로 이어질 것을 요구).
-              넓은 화면은 "소개 | 방침" 한 줄, 휴대폰 폭에서는 한 줄에 다 안 들어가 "|" 없이 두 줄로 놓는다. */}
+              넓은 화면은 "소개 | 방침 | 약관" 한 줄, 휴대폰 폭에서는 소개 / "방침 | 약관" 두 줄로 놓는다. */}
           <p className="font-code mt-8 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs text-gray-400">
             <span className="break-keep">PIXEL ART는 칸을 칠해 도트 그림을 그리는 학생용 그리기 도구예요.</span>
             <span aria-hidden="true" className="hidden text-gray-600 sm:inline">|</span>
-            <a href="/privacy.html" className="whitespace-nowrap underline-offset-4 hover:text-gray-200 hover:underline">
-              개인정보처리방침
-            </a>
+            <span className="flex items-center gap-x-2 whitespace-nowrap">
+              <a href="/privacy.html" className="underline-offset-4 hover:text-gray-200 hover:underline">
+                개인정보처리방침
+              </a>
+              <span aria-hidden="true" className="text-gray-600">|</span>
+              <a href="/terms.html" className="underline-offset-4 hover:text-gray-200 hover:underline">
+                이용약관
+              </a>
+            </span>
           </p>
 
         </div>
