@@ -8,6 +8,11 @@ updates:
       time: '03:30'
       timezone: Asia/Seoul
     open-pull-requests-limit: 5
+    # 메이저 버전 업그레이드(React 19, Vite 8, Tailwind 4 등)는 화면·빌드가 깨질 수 있어 자동 PR을 만들지 않는다.
+    # 필요할 때 직접 테스트하며 올린다. 마이너·패치(보안 수정 포함)는 계속 받는다.
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       development-dependencies:
         dependency-type: development
@@ -20,3 +25,7 @@ updates:
       time: '03:45'
       timezone: Asia/Seoul
     open-pull-requests-limit: 3
+    # codeql-action의 init과 analyze는 같은 버전이어야 해서 한 PR로 묶는다
+    groups:
+      github-actions:
+        patterns: ['*']
